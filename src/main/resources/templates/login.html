@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org">
+<head><title>Login</title></head>
+<body style="font-family: Arial; margin: 50px;">
+<h2>User Login</h2>
+<div th:if="${param.error}" style="color: red;">Invalid email or password.</div>
+<div th:if="${param.success}" style="color: green;">Registration successful! Please log in.</div>
+
+<!-- Spring Security intercepts the username and password fields automatically -->
+<form th:action="@{/login}" method="post">
+    <label>Email:</label><br><input type="email" name="username" required><br><br>
+    <label>Password:</label><br><input type="password" name="password" required><br><br>
+    <button type="submit">Login</button>
+</form>
+</body>
+</html>

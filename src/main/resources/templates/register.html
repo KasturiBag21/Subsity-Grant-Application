@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org">
+<head>
+    <title>User Registration</title>
+</head>
+<body style="font-family: Arial; margin: 50px; background-color: #f9f9f9;">
+
+<div style="max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; margin-bottom: 20px;">Create an Account</h2>
+
+    <!-- Global Database Logic Error Notification (e.g., Duplicate Email) -->
+    <div th:if="${error}" style="color: white; background-color: #d9534f; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px;" th:text="${error}"></div>
+
+        <!-- Keep object declaration looking for attributes map context -->
+    <form th:action="@{/register}" th:object="${user}" method="post">
+
+        <label><strong>Email:</strong></label><br>
+        <input type="text" th:field="*{email}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+        <br><br>
+
+        <label><strong>Password:</strong></label><br>
+        <input type="password" th:field="*{password}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+        <br><br>
+
+        <label><strong>Government ID:</strong></label><br>
+        <input type="text" th:field="*{governmentId}" placeholder="e.g., ABCD12345E" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('governmentId')}" th:errors="*{governmentId}"></span>
+        <br><br>
+
+        <label><strong>Contact Number:</strong></label><br>
+        <input type="text" th:field="*{contactNumber}" placeholder="10 digits only" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></span>
+        <br><br>
+
+        <label><strong>Age:</strong></label><br>
+        <input type="number" th:field="*{age}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></span>
+        <br><br>
+
+        <label><strong>Address:</strong></label><br>
+        <input type="text" th:field="*{address}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></span>
+        <br><br>
+
+        <label><strong>Scheme Name:</strong></label><br>
+        <input type="text" th:field="*{schemeName}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
+        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('schemeName')}" th:errors="*{schemeName}"></span>
+        <br><br>
+
+        <button type="submit" style="width: 100%; background-color: #0275d8; color: white; padding: 10px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Register</button>
+    </form>
+
+    <p style="text-align: center; margin-top: 15px; font-size: 14px;">Already have an account? <a href="/login">Login here</a></p>
+</div>
+
+</body>
+</html>

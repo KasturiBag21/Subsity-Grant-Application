@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org">
+<head><title>User Dashboard</title></head>
+<body style="font-family: Arial; margin: 50px;">
+<h2>Welcome to your Subsidy Dashboard!</h2>
+<p>Logged in User Account context: <strong th:text="${user.email}"></strong></p>
+<hr>
+<h3>Your Registration Details:</h3>
+<table border="1" cellpadding="10">
+    <tr><th>Field</th><th>Stored Profile Value</th></tr>
+    <tr><td>User Database Registry ID</td><td th:text="${user.id}"></td></tr>
+    <tr><td>Government Identification Token</td><td th:text="${user.governmentId}"></td></tr>
+    <tr><td>Primary Mobile Line</td><td th:text="${user.contactNumber}"></td></tr>
+    <tr><td>Age Metric</td><td th:text="${user.age}"></td></tr>
+    <tr><td>Residential Location Address</td><td th:text="${user.address}"></td></tr>
+    <tr><td>Enrolled Subsidy Allocation Scheme</td><td th:text="${user.schemeName}"></td></tr>
+    <tr><td>Password Status Key</td><td>🔒 Encrypted with BCrypt Hashing Algorithm</td></tr>
+</table>
+<br>
+<form th:action="@{/logout}" method="post">
+    <button type="submit">Logout Safely</button>
+</form>
+</body>
+</html>
