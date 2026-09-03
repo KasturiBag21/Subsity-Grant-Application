@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org" xmlns:sec="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Dynamic Ingestion Form</title>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        :root {
+            --sagar-saffron: #FF9933;
+            --sagar-saffron-dark: #E67E00;
+            --sagar-navy: #000080;
+            --sagar-navy-dark: #00004D;
+            --sagar-green: #138808;
+            --sagar-green-dark: #0E6606;
+            --sagar-bg-light: #F8FAFC;
+            --sagar-shadow: 0 10px 25px rgba(0, 0, 128, 0.04);
+        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--sagar-bg-light); margin: 0; padding: 0; color: #1E293B; }
+        .form-container { max-width: 600px; margin: 40px auto; background: #FFFFFF; padding: 40px; border-radius: 12px; box-shadow: var(--sagar-shadow); border-top: 4px solid var(--sagar-navy); }
+        .form-header-title { color: var(--sagar-navy); margin: 0 0 5px 0; font-size: 26px; font-weight: 800; }
+        .field-group { display: flex; flex-direction: column; margin-bottom: 20px; }
+        .field-group label { font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #475569; }
+        .field-group input { padding: 12px; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 14px; outline: none; background-color: #ffffff; }
+        .field-group input:focus { border-color: var(--sagar-navy); box-shadow: 0 0 0 3px rgba(0,0,128,0.1); }
+        .field-group input[readonly] { background-color: #F8FAFC; color: #64748B; cursor: not-allowed; border-color: #E2E8F0; }
+        .form-submit-btn { width: 100%; background: var(--sagar-green); color: white; padding: 14px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 12px rgba(19, 136, 8, 0.2); font-family: inherit; }
+        .form-submit-btn:hover { background: var(--sagar-green-dark); }
+    </style>
+</head>
+<body>
+
+<!-- 🧭 Universal Fixed Navigation Bar Header component -->
+<div class="universal-header">
+    <a href="/" class="brand-block">
+        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
+            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text">
+            <h1>SAGAR<span>.</span></h1>
+            <p>Subsidy &amp; Grant Administration</p>
+        </div>
+    </a>
+    <div class="nav-panel">
+        <!-- FIX: Uses explicit conditional sec:authorize and native secure variable mapping tags to prevent SpringEL parsing crashes -->
+        <div sec:authorize="isAuthenticated()">
+            <span style="font-size: 14px; font-weight: bold; color: #444; margin-right: 15px;">
+                Logged in as: <span sec:authentication="name" style="color: var(--sagar-navy);">user@domain.com</span>
+            </span>
+            <a href="/dashboard" style="font-weight: bold; color: var(--sagar-navy); margin-right:15px;">Dashboard</a>
+            <a href="/logout" style="color: #475569; font-weight:bold; text-decoration:none;">Logout</a>
+        </div>
+        <div sec:authorize="isAnonymous()">
+            <a href="/login" class="nav-btn btn-outline" style="padding:4px 12px; text-decoration: none;">Login</a>
+            <a href="/register" class="nav-btn btn-solid" style="padding:4px 12px; text-decoration: none; color:white;">Register</a>
+        </div>
+    </div>
+</div>
+
+<!-- 📋 Form Ingestion Panel -->
+<div class="form-container">
+
+    <!-- 🔙 Back Navigation Hook Links -->
+    <a sec:authorize="isAuthenticated()" href="/dashboard" class="btn-back">← Back to Dashboard Hub</a>
+    <a sec:authorize="isAnonymous()" href="/" class="btn-back">← Back to Main Catalog</a>
+
+    <h2 class="form-header-title">Evaluate System Eligibility</h2>
+    <p style="color: #64748B; font-size: 14px; margin: 0 0 25px 0;">
+        Review criteria metrics for: <strong th:text="${scheme.schemeName}" style="color: var(--sagar-saffron);">Scheme Track Name</strong>
+    </p>
+
+    <div th:if="${error}" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; font-weight: 500;" th:text="${error}"></div>
+
+    <!-- Criteria Info Box -->
+    <div class="criteria-info-box">
+        <strong>📋 Mandatory Qualifications Framework:</strong>
+        <div th:if="${scheme.schemeName == 'Education Subsidy'}">
+            <ul class="criteria-list">
+                <li>Current Age Bracket: 18 to 30 Years old maximum</li>
+                <li>Annual Household Wealth Limit: Under ₹5,00,000</li>
+                <li>Required Registered Employment Status: <strong>Student</strong></li>
+            </ul>
+        </div>
+        <div th:if="${scheme.schemeName == 'Farmer Support Grant'}">
+            <ul class="criteria-list">
+                <li>Current Age Bracket: 18 to 65 Years old maximum</li>
+                <li>Annual Household Wealth Limit: Under ₹4,00,000</li>
+                <li>Required Registered Employment Status: <strong>Farmer</strong></li>
+            </ul>
+        </div>
+        <div th:if="${scheme.schemeName == 'Housing Assistance Scheme'}">
+            <ul class="criteria-list">
+                <li>Current Age Bracket: 18 to 70 Years old maximum</li>
+                <li>Annual Household Wealth Limit: Strictly under ₹3,00,000</li>
+                <li>Required Registered Employment Status: Open (Any Category Approved)</li>
+            </ul>
+        </div>
+        <div th:if="${scheme.schemeName == 'Women Entrepreneurship Grant'}">
+            <ul class="criteria-list">
+                <li>Current Age Bracket: 18 to 60 Years old maximum</li>
+                <li>Annual Household Wealth Limit: Under ₹6,00,000</li>
+                <li>Required Registered Employment Status: <strong>Self Employed</strong></li>
+            </ul>
+        </div>
+        <div th:if="${scheme.schemeName == 'Senior Citizen Assistance'}">
+            <ul class="criteria-list">
+                <li>Minimum Age Gate Entrance: Must be 60 Years old or older</li>
+                <li>Annual Household Wealth Limit: Under ₹3,00,000</li>
+                <li>Required Registered Employment Status: Open (Any Category Approved)</li>
+            </ul>
+        </div>
+    </div>
+
+    <form th:action="@{/eligibility/{id}/check(id=${scheme.id})}" th:object="${beneficiary}" method="post">
+        <div class="field-group">
+            <label>Enter Your Current Age (Years)</label>
+            <input type="number" th:field="*{age}" min="18" max="100" placeholder="e.g. 25" required>
+        </div>
+        <div class="field-group">
+            <label>Annual Gross Household Income (INR)</label>
+            <input type="number" th:field="*{income}" min="0" placeholder="₹ Family revenue" required>
+        </div>
+        <div class="field-group">
+            <label>Primary Identity Key (Aadhaar / PAN Card)</label>
+            <input type="text" th:field="*{governmentId}" placeholder="Enter Aadhaar or PAN Card Key" required>
+            <div sec:authorize="isAuthenticated()" class="input-hint" style="color:var(--sagar-saffron-dark); font-weight:500;">Note: Must match the unique key used at the time of account registration.</div>
+        </div>
+        <div class="field-group">
+            <label>Current Employment / Occupation Status</label>
+            <input type="text" th:field="*{occupation}" readonly="readonly" required>
+        </div>
+        <div class="field-group">
+            <label>Contact Mobile Number</label>
+            <input type="text" th:field="*{contactNumber}" pattern="^[6-9][0-9]{9}$" placeholder="10-digit mobile number" required>
+        </div>
+        <button type="submit" class="form-submit-btn">Run Pipeline Evaluation Math</button>
+    </form>
+</div>
+
+</body>
+</html>

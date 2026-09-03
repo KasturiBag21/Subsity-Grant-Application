@@ -1,58 +1,179 @@
 <!DOCTYPE html>
 <html xmlns:th="http://thymeleaf.org">
 <head>
-    <title>User Registration</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Citizen Registration Console</title>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        .split-canvas-wide {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            max-width: 1300px;
+            margin: 40px auto;
+            gap: 40px;
+            padding: 0 20px;
+            align-items: center;
+        }
+        @media (max-width: 992px) {
+            .split-canvas-wide { grid-template-columns: 1fr; }
+            .marketing-banner-orange { display: none; }
+        }
+
+        /* Left Hand Marketing Section */
+        .marketing-banner-orange {
+            position: relative;
+            background: linear-gradient(rgba(255, 153, 51, 0.1), rgba(0, 0, 128, 0.15)),
+            url('https://unsplash.com') center/cover;
+            height: 520px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .traditional-badge-orange {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .traditional-badge-orange h3 { margin: 0; color: #000080; font-size: 24px; }
+        .traditional-badge-orange p { margin: 5px 0 0 0; color: #ff9933; font-weight: bold; font-size: 16px; }
+
+        /* Right Hand Registration Form Card */
+        .form-card-wide {
+            background: white;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            border-top: 4px solid var(--sagar-saffron);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 20px;
+            margin-top: 20px;
+        }
+        @media (max-width: 576px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .form-field { display: flex; flex-direction: column; }
+        .form-field label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #444; }
+        .form-field input, .form-field select { padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }
+        .form-field input:focus, .form-field select:focus { border-color: var(--sagar-saffron); }
+        .validation-error { color: #dc3545; font-size: 11px; font-weight: bold; margin-top: 3px; }
+
+        .register-submit-btn {
+            grid-column: span 2;
+            background: var(--sagar-saffron);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        .register-submit-btn:hover { background: var(--sagar-saffron-dark); }
+        @media (max-width: 576px) { .register-submit-btn { grid-column: span 1; } }
+    </style>
 </head>
-<body style="font-family: Arial; margin: 50px; background-color: #f9f9f9;">
+<body>
 
-<div style="max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-    <h2 style="text-align: center; margin-bottom: 20px;">Create an Account</h2>
+<!-- 🧭 Navbar Section Layout -->
+<div class="universal-header">
+    <a href="/" class="brand-block">
+        <!-- FIX: Embedded matching SAGAR Vector Emblem Layout -->
+        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
+            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text">
+            <h1>SAGAR<span>.</span></h1>
+            <p>Subsidy &amp; Grant Administration</p>
+        </div>
+    </a>
+    <div class="nav-panel">
+        <a href="/">Home</a>
+        <a href="/#schemes">Schemes</a>
+        <a href="/login" class="nav-btn btn-outline">Login Portal</a>
+    </div>
+</div>
 
-    <!-- Global Database Logic Error Notification (e.g., Duplicate Email) -->
-    <div th:if="${error}" style="color: white; background-color: #d9534f; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px;" th:text="${error}"></div>
+<div class="split-canvas-wide">
+    <div class="marketing-banner-orange">
+        <div class="traditional-badge-orange">
+            <h3>आसान आवेदन</h3>
+            <p>सशक्त नागरिक</p>
+            <div style="font-size:12px; color:#555; margin-top:6px; font-weight: 500;">सरकारी योजनाओं का लाभ सीधे बैंक खाते में पाएं</div>
+        </div>
+    </div>
 
-        <!-- Keep object declaration looking for attributes map context -->
-    <form th:action="@{/register}" th:object="${user}" method="post">
+    <div class="form-card-wide">
+        <h2 style="margin: 0; color: var(--sagar-saffron); font-size: 28px;">Register</h2>
+        <!-- FIX: Sub-text aligned dynamically to platform role name specs -->
+        <p style="margin: 5px 0 15px 0; color: #6c757d; font-size: 14px;">Create your account on the SAGAR administration platform.</p>
 
-        <label><strong>Email:</strong></label><br>
-        <input type="text" th:field="*{email}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
-        <br><br>
+        <div th:if="${error}" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; font-weight: 500;" th:text="${error}"></div>
 
-        <label><strong>Password:</strong></label><br>
-        <input type="password" th:field="*{password}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
-        <br><br>
-
-        <label><strong>Government ID:</strong></label><br>
-        <input type="text" th:field="*{governmentId}" placeholder="e.g., ABCD12345E" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('governmentId')}" th:errors="*{governmentId}"></span>
-        <br><br>
-
-        <label><strong>Contact Number:</strong></label><br>
-        <input type="text" th:field="*{contactNumber}" placeholder="10 digits only" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></span>
-        <br><br>
-
-        <label><strong>Age:</strong></label><br>
-        <input type="number" th:field="*{age}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></span>
-        <br><br>
-
-        <label><strong>Address:</strong></label><br>
-        <input type="text" th:field="*{address}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></span>
-        <br><br>
-
-        <label><strong>Scheme Name:</strong></label><br>
-        <input type="text" th:field="*{schemeName}" style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;"><br>
-        <span style="color: #d9534f; font-size: 13px; font-weight: bold;" th:if="${#fields.hasErrors('schemeName')}" th:errors="*{schemeName}"></span>
-        <br><br>
-
-        <button type="submit" style="width: 100%; background-color: #0275d8; color: white; padding: 10px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Register</button>
-    </form>
-
-    <p style="text-align: center; margin-top: 15px; font-size: 14px;">Already have an account? <a href="/login">Login here</a></p>
+        <form th:action="@{/register}" th:object="${user}" method="post">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Account Email (Used as Login ID)</label>
+                    <input type="email" th:field="*{email}" placeholder="name@domain.com" required>
+                    <div class="validation-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                </div>
+                <div class="form-field">
+                    <label>Contact Mobile Number</label>
+                    <input type="text" th:field="*{contactNumber}" placeholder="10-digit mobile" required>
+                    <div class="validation-error" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></div>
+                </div>
+                <div class="form-field">
+                    <label>Aadhaar Number / Government ID</label>
+                    <input type="text" th:field="*{governmentId}" placeholder="e.g. ABCD12345E" required>
+                    <div class="validation-error" th:if="${#fields.hasErrors('governmentId')}" th:errors="*{governmentId}"></div>
+                </div>
+                <div class="form-field">
+                    <label>Primary Desired Subsidy Scheme</label>
+                    <select th:field="*{schemeName}" required>
+                        <option value="">-- Choose Initial Program Track --</option>
+                        <option value="Education Subsidy">Education Subsidy</option>
+                        <option value="Farmer Support Grant">Farmer Support Grant</option>
+                        <option value="Housing Assistance Scheme">Housing Assistance Scheme</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Age Profile (Years)</label>
+                    <input type="number" th:field="*{age}" placeholder="Age" required>
+                    <div class="validation-error" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></div>
+                </div>
+                <div class="form-field">
+                    <label>Annual Household Income (INR)</label>
+                    <input type="number" th:field="*{income}" placeholder="₹ Total Family Revenue" required>
+                </div>
+                <div class="form-field">
+                    <label>Current Occupation</label>
+                    <input type="text" th:field="*{occupation}" placeholder="e.g. Farmer, Student, Self Employed" required>
+                </div>
+                <div class="form-field">
+                    <label>Permanent Residential Address</label>
+                    <input type="text" th:field="*{address}" placeholder="Full residential details" required>
+                </div>
+                <div class="form-field" style="grid-column: span 2;">
+                    <label>Secure Access Password</label>
+                    <input type="password" th:field="*{password}" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="register-submit-btn">Complete Portal Registration</button>
+            </div>
+        </form>
+        <p style="text-align: center; font-size: 14px; color: #555; margin-top: 25px;">Already have an account? <a href="/login" style="color: var(--sagar-saffron); font-weight: bold; text-decoration: none;">Login here</a></p>
+    </div>
 </div>
 
 </body>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org" xmlns:sec="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>SAGAR - Eligibility Audit Report</title>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        :root {
+            --sagar-saffron: #FF9933;
+            --sagar-navy: #000080;
+            --sagar-navy-dark: #00004D;
+            --sagar-green: #138808;
+            --sagar-green-dark: #0E6606;
+        }
+        .report-card { max-width: 650px; margin: 40px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .score-display { font-size: 48px; font-weight: bold; color: var(--sagar-navy); text-align: center; margin: 20px 0; padding: 15px; background: #e9f2ff; border-radius: 6px; }
+        .status-banner { padding: 15px; border-radius: 4px; color: white; font-weight: bold; margin-bottom: 25px; text-align: center; }
+        .criterion-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 14px; }
+        .brand-center-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 15px; text-align: center; }
+        .brand-logo-svg { width: 56px; height: 54px; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="report-card">
+
+    <!-- 🔙 Dynamic Back Button Back To Source Form -->
+    <a th:href="@{/eligibility/{id}(id=${scheme.id})}" class="btn-back">← Re-enter Evaluation Parameters</a>
+
+    <div class="brand-center-wrapper">
+        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
+            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h1 style="font-size:24px; color:var(--sagar-navy); margin:0;">SAGAR<span>.</span></h1>
+    </div>
+
+    <h2 style="text-align: center; color: var(--sagar-navy); margin-top: 0;">Platform Assessment Report</h2>
+    <p style="text-align: center; color: #666; font-weight: bold;" th:text="${scheme.schemeName}">Target Scheme Name</p>
+
+    <!-- Status Notification Banner Blocks -->
+    <div th:if="${result.eligible}" class="status-banner" style="background: var(--sagar-green);">
+        ✓ ELIGIBILITY PASSED - CRITERIA VERIFIED
+    </div>
+    <div th:if="${!result.eligible}" class="status-banner" style="background: var(--sagar-navy-dark);">
+        ❌ CRITERIA DROP - CONSTRAINTS GAP
+    </div>
+
+    <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Criteria Checklist Summary</h3>
+    <div>
+        <div class="criterion-item" th:each="passed : ${result.passedCriteria}">
+            <span th:text="${passed}">Requirement Check Passed</span>
+            <span style="color:var(--sagar-green); font-weight:bold;">PASS</span>
+        </div>
+        <div class="criterion-item" th:each="failed : ${result.failedCriteria}">
+            <span th:text="${failed}">Requirement Check Failed</span>
+            <span style="color:var(--sagar-saffron); font-weight:bold;">FAIL</span>
+        </div>
+    </div>
+
+    <!-- Payout Submission Interceptor based on Authentication States -->
+    <div th:if="${result.eligible}" style="margin-top: 30px;">
+        <h3 style="margin-bottom: 5px;">Calculated Eligibility Priority Rank</h3>
+        <div class="score-display" th:text="${result.eligibilityScore}">0</div>
+
+        <!-- Scenario 1: User is logged in -> Can submit directly -->
+        <div sec:authorize="isAuthenticated()">
+            <form th:action="@{/apply/{id}(id=${scheme.id})}" method="post">
+                <button type="submit" class="nav-btn btn-solid" style="width:100%; border:none; padding:12px; cursor:pointer; background: var(--sagar-green); font-family: inherit;">Submit Request to Treasury</button>
+            </form>
+        </div>
+
+        <!-- Scenario 2: Anonymous Guest User -> Prompts login/registration -->
+        <div sec:authorize="isAnonymous()" style="text-align: center; background: #FFF4EB; padding: 15px; border-radius: 6px; border: 1px dashed var(--sagar-saffron);">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #333; font-weight: 500;">Create an official citizen account to lock in this score and apply.</p>
+            <a th:href="@{/register(selectedScheme=${scheme.schemeName})}" class="nav-btn btn-solid" style="text-decoration:none; display:block; background: var(--sagar-navy); color: white;">Sign Up &amp; Apply Now</a>
+        </div>
+    </div>
+
+    <p style="text-align: center; margin-top: 25px;"><a sec:authorize="isAuthenticated()" href="/dashboard" style="color: var(--sagar-navy); text-decoration: none; font-weight: bold;">Return to Dashboard Hub</a></p>
+    <p style="text-align: center; margin-top: 10px;"><a href="/" style="color: var(--sagar-navy); text-decoration: none; font-weight: bold;">Return to Home Catalog</a></p>
+</div>
+
+</body>
+</html>

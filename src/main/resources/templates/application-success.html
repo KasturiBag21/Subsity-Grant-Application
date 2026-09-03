@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>EasySubsidy - Registration Confirmed</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; text-align: center; padding: 50px 20px; }
+        .success-box { max-width: 500px; margin: 0 auto; background: white; padding: 4px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 40px 20px; border-top: 6px solid #28a745; }
+        .success-icon { font-size: 64px; color: #28a745; margin-bottom: 20px; }
+        .meta-log-panel { background: #f8f9fa; border-radius: 4px; padding: 15px; text-align: left; font-size: 13px; margin: 25px 0; line-height: 1.6; }
+        .btn-home { display: block; background: #0056b3; color: white; padding: 12px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="success-box">
+    <div class="success-icon">🏢</div>
+    <h2 style="color: #23272b; margin-top: 0;">Application Submitted</h2>
+    <p style="color: #6c757d;">Your request has been ingested into the verification pipeline.</p>
+
+    <!-- Dynamic Registry Trace Metrics Mapping Block -->
+    <div class="meta-log-panel" th:if="${application}">
+        <strong>Tracking Pipeline Record ID:</strong> #SUB-<span th:text="${application.id}">1024</span><br>
+        <strong>Target Subsidy Profile:</strong> <span th:text="${application.scheme.schemeName}">Loading...</span><br>
+        <strong>Workflow Verification Phase:</strong> <span style="background: #ffeeba; color: #856404; padding: 2px 6px; border-radius: 3px; font-weight: bold;" th:text="${application.applicationStatus}">SUBMITTED</span><br>
+        <strong>Ingestion Timestamp Log:</strong> <span th:text="${#temporals.format(application.applicationDate, 'yyyy-MM-dd HH:mm')}">2026-09-02</span>
+    </div>
+
+    <a href="/dashboard" class="btn-home">Return to Account Control Dashboard</a>
+</div>
+
+</body>
+</html>

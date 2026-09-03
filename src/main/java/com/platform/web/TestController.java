@@ -1,4 +1,6 @@
-package org.example.subsidyplatformtest;
+package com.platform.web;
+
+//package org.example.subsidyplatformtest;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
