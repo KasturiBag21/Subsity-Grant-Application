@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>SAGAR - Master Governance Monitor Console</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body style="background: var(--sagar-bg-light); margin: 0; font-family: 'Segoe UI', Arial, sans-serif;">
+
+<!-- 🧭 Universal Admin Header Component -->
+<header class="universal-header" style="border-top: 4px solid var(--sagar-navy);">
+    <a th:href="@{/dashboard}" class="brand-block">
+        <svg class="brand-logo-svg" viewBox="0 0 44 44" fill="none" xmlns="http://w3.org">
+            <circle cx="22" cy="22" r="20" fill="#000080"/>
+            <path d="M12 22H32M22 12V32" stroke="#FF9933" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text">
+            <h1>SAGAR<span>.</span></h1>
+            <p>System Scope Administration Console</p>
+        </div>
+    </a>
+    <div style="font-size: 14px; font-weight: 600; color: #475569;">
+        Security Scope Context Level: <strong style="color: #EF4444;">Master Platform Administrator</strong> | Account: <span th:text="${username}">admin@sagar.gov.in</span>
+        <a th:href="@{/logout}" class="nav-btn btn-solid" style="margin-left: 20px; padding: 8px 20px; background:#0F172A;">Logout Console</a>
+    </div>
+</header>
+
+<!-- Main Administrator Audit Monitoring Panel Grid -->
+<main style="max-width: 1140px; margin: 40px auto; padding: 0 20px;">
+    <div style="background: #FFFFFF; border-radius: 12px; padding: 35px; box-shadow: var(--sagar-shadow); border-top: 4px solid var(--sagar-saffron);">
+
+        <div style="border-bottom: 2px solid #E2E8F8; padding-bottom: 15px; margin-bottom: 30px;">
+            <h2 style="color: var(--sagar-navy); font-weight: 800; margin: 0 0 5px 0;">Cross-Regional Subsidy Pipeline Tracking Monitor</h2>
+            <p style="color: #64748B; margin: 0; font-size: 13px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Real-time throughput analysis, compliance tracking flow-through metrics, and status oversight.</p>
+        </div>
+
+        <!-- Monitoring Grid Master Table View -->
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+            <thead>
+            <tr style="background: #F8FAFC; border-bottom: 2px solid #E2E8F0; color: var(--sagar-navy); font-weight: 800;">
+                <th style="padding: 16px 12px;">Application Reference</th>
+                <th style="padding: 16px 12px;">Beneficiary Account Profile</th>
+                <th style="padding: 16px 12px;">Target Subsidy Program Track</th>
+                <th style="padding: 16px 12px;">Initial Validation Engine Rules</th>
+                <th style="padding: 16px 12px; text-align: right;">Current Active System Workflow Stage</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="app : ${apps}" style="border-bottom: 1px solid #E2E8F0; color: #334155; font-weight: 600;">
+                <td style="padding: 16px 12px; font-weight: 800; color: var(--sagar-navy);" th:text="'#SUB-' + ${app.id}">#100</td>
+                <td style="padding: 16px 12px;" th:text="${app.user.email}">user@domain.com</td>
+                <td style="padding: 16px 12px; color: var(--sagar-saffron-dark);" th:text="${app.scheme.schemeName}">Housing Assistance Scheme</td>
+                <td style="padding: 16px 12px;">
+                    <span class="ministry-badge" th:if="${app.eligibilityStatus}">✓ Rule Pass Verification</span>
+                    <span class="ministry-badge" th:if="${!app.eligibilityStatus}" style="background:rgba(239,68,68,0.08); color:#EF4444;">✗ Constraint Breach</span>
+                </td>
+                <td style="padding: 16px 12px; text-align: right;">
+                            <span th:text="${app.applicationStatus}"
+                                  style="padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; text-align: center; min-width: 145px; letter-spacing:0.5px;"
+                                  th:styleappend="${app.applicationStatus.name() == 'APPROVED' ? 'background:rgba(19,136,8,0.08); color:var(--sagar-green-dark); border:1px solid var(--sagar-green);' :
+                                                   (app.applicationStatus.name() == 'REJECTED' ? 'background:rgba(239,68,68,0.08); color:#991B1B; border:1px solid #EF4444;' :
+                                                   (app.applicationStatus.name() == 'DISTRICT_REVIEW' ? 'background:rgba(255,153,51,0.08); color:var(--sagar-saffron-dark); border:1px solid var(--sagar-saffron);' :
+                                                   'background:#E2E8F8; color:var(--sagar-navy); border:1px solid var(--sagar-navy);'))}">
+                                STATUS
+                            </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

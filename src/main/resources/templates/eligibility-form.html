@@ -1,145 +1,374 @@
 <!DOCTYPE html>
-<html xmlns:th="http://thymeleaf.org" xmlns:sec="http://thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAGAR - Dynamic Ingestion Form</title>
+    <title>SAGAR - Grant Application Form</title>
     <link th:href="@{/css/style.css}" rel="stylesheet">
     <style>
-        :root {
-            --sagar-saffron: #FF9933;
-            --sagar-saffron-dark: #E67E00;
-            --sagar-navy: #000080;
-            --sagar-navy-dark: #00004D;
-            --sagar-green: #138808;
-            --sagar-green-dark: #0E6606;
-            --sagar-bg-light: #F8FAFC;
-            --sagar-shadow: 0 10px 25px rgba(0, 0, 128, 0.04);
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #F1F5F9; margin: 0; color: #1E293B; }
+
+        .page-wrap { max-width: 760px; margin: 36px auto; padding: 0 20px 60px; }
+
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: #000080; font-weight: 700; font-size: 13px;
+            text-decoration: none; margin-bottom: 22px;
         }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--sagar-bg-light); margin: 0; padding: 0; color: #1E293B; }
-        .form-container { max-width: 600px; margin: 40px auto; background: #FFFFFF; padding: 40px; border-radius: 12px; box-shadow: var(--sagar-shadow); border-top: 4px solid var(--sagar-navy); }
-        .form-header-title { color: var(--sagar-navy); margin: 0 0 5px 0; font-size: 26px; font-weight: 800; }
-        .field-group { display: flex; flex-direction: column; margin-bottom: 20px; }
-        .field-group label { font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #475569; }
-        .field-group input { padding: 12px; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 14px; outline: none; background-color: #ffffff; }
-        .field-group input:focus { border-color: var(--sagar-navy); box-shadow: 0 0 0 3px rgba(0,0,128,0.1); }
-        .field-group input[readonly] { background-color: #F8FAFC; color: #64748B; cursor: not-allowed; border-color: #E2E8F0; }
-        .form-submit-btn { width: 100%; background: var(--sagar-green); color: white; padding: 14px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 12px rgba(19, 136, 8, 0.2); font-family: inherit; }
-        .form-submit-btn:hover { background: var(--sagar-green-dark); }
+        .back-link:hover { text-decoration: underline; }
+
+        .form-card {
+            background: white;
+            border-radius: 12px;
+            padding: 36px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.07);
+            border-top: 4px solid #000080;
+        }
+
+        .form-card h2 { margin: 0 0 4px; color: #000080; font-size: 20px; font-weight: 800; }
+        .form-card .sub { color: #64748B; font-size: 13px; margin: 0 0 28px; line-height: 1.5; }
+
+        /* Section dividers */
+        .section-heading {
+            font-size: 11px; font-weight: 800; color: #94A3B8;
+            text-transform: uppercase; letter-spacing: .6px;
+            border-bottom: 1px solid #F1F5F9; padding-bottom: 8px;
+            margin: 28px 0 18px;
+        }
+        .section-heading:first-of-type { margin-top: 0; }
+
+        /* Two-column grid */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+        @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+        .full { grid-column: span 2; }
+        @media (max-width: 560px) { .full { grid-column: span 1; } }
+
+        .field { display: flex; flex-direction: column; }
+        .field label {
+            font-size: 11px; font-weight: 700; color: #475569;
+            text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px;
+        }
+        .field input, .field select {
+            padding: 10px 12px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 7px;
+            font-size: 13.5px;
+            outline: none;
+            transition: border .2s, box-shadow .2s;
+            background: #FAFAFA;
+            color: #1E293B;
+        }
+        .field input:focus, .field select:focus {
+            border-color: #000080;
+            box-shadow: 0 0 0 3px rgba(0,0,128,.08);
+            background: #fff;
+        }
+        .field .hint { font-size: 11px; color: #94A3B8; margin-top: 4px; }
+
+        /* Pre-filled note */
+        .prefill-note {
+            background: #EFF6FF; border: 1px solid #BFDBFE;
+            border-radius: 7px; padding: 10px 14px;
+            font-size: 12px; color: #1D4ED8; font-weight: 600;
+            margin-bottom: 22px;
+        }
+
+        /* Document upload box */
+        .upload-box {
+            background: #F8FAFC; border: 1.5px dashed #CBD5E1;
+            border-radius: 8px; padding: 22px;
+            margin-top: 6px;
+        }
+        .upload-box h4 { margin: 0 0 16px; color: #000080; font-size: 14px; font-weight: 800; }
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 560px) { .upload-grid { grid-template-columns: 1fr; } }
+        .upload-field label { font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 6px; }
+        .upload-field input[type="file"] {
+            width: 100%; font-size: 13px; color: #475569;
+            border: 1.5px solid #E2E8F0; border-radius: 6px;
+            padding: 7px 10px; background: white; cursor: pointer;
+        }
+
+        /* Submit */
+        .submit-btn {
+            width: 100%; padding: 14px;
+            background: #000080; color: white;
+            border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 700;
+            cursor: pointer; margin-top: 28px;
+            transition: background .15s;
+            letter-spacing: .3px;
+        }
+        .submit-btn:hover { background: #0000B3; }
+
+        /* Score preview chips */
+        .score-chips {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px;
+        }
+        .chip {
+            font-size: 11px; font-weight: 700;
+            padding: 4px 12px; border-radius: 20px;
+            background: #F1F5F9; color: #64748B;
+            border: 1px solid #E2E8F0;
+        }
     </style>
 </head>
 <body>
 
-<!-- 🧭 Universal Fixed Navigation Bar Header component -->
+<!-- Navbar -->
 <div class="universal-header">
-    <a href="/" class="brand-block">
-        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+    <a href="/dashboard" class="brand-block">
+        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
-            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
             <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
             <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
         </svg>
         <div class="brand-text">
             <h1>SAGAR<span>.</span></h1>
-            <p>Subsidy &amp; Grant Administration</p>
+            <p>Subsidy &amp; Grant Administration Portal</p>
         </div>
     </a>
-    <div class="nav-panel">
-        <!-- FIX: Uses explicit conditional sec:authorize and native secure variable mapping tags to prevent SpringEL parsing crashes -->
-        <div sec:authorize="isAuthenticated()">
-            <span style="font-size: 14px; font-weight: bold; color: #444; margin-right: 15px;">
-                Logged in as: <span sec:authentication="name" style="color: var(--sagar-navy);">user@domain.com</span>
-            </span>
-            <a href="/dashboard" style="font-weight: bold; color: var(--sagar-navy); margin-right:15px;">Dashboard</a>
-            <a href="/logout" style="color: #475569; font-weight:bold; text-decoration:none;">Logout</a>
-        </div>
-        <div sec:authorize="isAnonymous()">
-            <a href="/login" class="nav-btn btn-outline" style="padding:4px 12px; text-decoration: none;">Login</a>
-            <a href="/register" class="nav-btn btn-solid" style="padding:4px 12px; text-decoration: none; color:white;">Register</a>
-        </div>
-    </div>
 </div>
 
-<!-- 📋 Form Ingestion Panel -->
-<div class="form-container">
+<div class="page-wrap">
+    <a class="back-link" href="/dashboard">← Back to Dashboard</a>
 
-    <!-- 🔙 Back Navigation Hook Links -->
-    <a sec:authorize="isAuthenticated()" href="/dashboard" class="btn-back">← Back to Dashboard Hub</a>
-    <a sec:authorize="isAnonymous()" href="/" class="btn-back">← Back to Main Catalog</a>
+    <div class="form-card">
+        <h2 th:text="'Apply for: ' + ${scheme.schemeName}">Apply for Scheme</h2>
+        <p class="sub">Complete the form below to check eligibility and submit your application. Scores are calculated instantly based on your entered details.</p>
 
-    <h2 class="form-header-title">Evaluate System Eligibility</h2>
-    <p style="color: #64748B; font-size: 14px; margin: 0 0 25px 0;">
-        Review criteria metrics for: <strong th:text="${scheme.schemeName}" style="color: var(--sagar-saffron);">Scheme Track Name</strong>
-    </p>
+        <!-- Score breakdown hint -->
+        <div class="score-chips">
+            <span class="chip" th:text="'🎂 Age ' + ${scheme.eligibleAgeMin} + '–' + ${scheme.eligibleAgeMax} + ' yrs → 30 pts'">Age</span>
+            <span class="chip" th:text="'💰 Income ≤ ₹' + ${#numbers.formatInteger(scheme.maxIncomeThreshold, 1, 'COMMA')} + ' → 40 pts'">Income</span>
+            <span class="chip">🪪 Govt ID provided → 30 pts</span>
+            <span class="chip" th:if="${scheme.occupationRestricted}" th:text="'💼 Occupation: ' + ${scheme.requiredOccupation} + ' (required)'">Occupation</span>
+            <span class="chip" th:if="${scheme.genderRestricted}" th:text="'⚧ Gender: ' + ${scheme.requiredGender} + ' (required)'">Gender</span>
+            <span class="chip" th:if="${scheme.requiresDisability}">♿ Disability Status: Yes / PwD (required)</span>
+            <span class="chip" th:if="${scheme.residenceRestricted}" th:text="'🏡 Residence: ' + ${scheme.requiredResidenceType} + ' (required)'">Residence</span>
+        </div>
 
-    <div th:if="${error}" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; font-weight: 500;" th:text="${error}"></div>
+        <!-- Pre-fill notice if profile data is available -->
+        <div class="prefill-note" th:if="${beneficiary != null and beneficiary.governmentId != null}">
+            ℹ️ Some fields have been pre-filled from your registered profile. Please verify before submitting.
+        </div>
 
-    <!-- Criteria Info Box -->
-    <div class="criteria-info-box">
-        <strong>📋 Mandatory Qualifications Framework:</strong>
-        <div th:if="${scheme.schemeName == 'Education Subsidy'}">
-            <ul class="criteria-list">
-                <li>Current Age Bracket: 18 to 30 Years old maximum</li>
-                <li>Annual Household Wealth Limit: Under ₹5,00,000</li>
-                <li>Required Registered Employment Status: <strong>Student</strong></li>
-            </ul>
-        </div>
-        <div th:if="${scheme.schemeName == 'Farmer Support Grant'}">
-            <ul class="criteria-list">
-                <li>Current Age Bracket: 18 to 65 Years old maximum</li>
-                <li>Annual Household Wealth Limit: Under ₹4,00,000</li>
-                <li>Required Registered Employment Status: <strong>Farmer</strong></li>
-            </ul>
-        </div>
-        <div th:if="${scheme.schemeName == 'Housing Assistance Scheme'}">
-            <ul class="criteria-list">
-                <li>Current Age Bracket: 18 to 70 Years old maximum</li>
-                <li>Annual Household Wealth Limit: Strictly under ₹3,00,000</li>
-                <li>Required Registered Employment Status: Open (Any Category Approved)</li>
-            </ul>
-        </div>
-        <div th:if="${scheme.schemeName == 'Women Entrepreneurship Grant'}">
-            <ul class="criteria-list">
-                <li>Current Age Bracket: 18 to 60 Years old maximum</li>
-                <li>Annual Household Wealth Limit: Under ₹6,00,000</li>
-                <li>Required Registered Employment Status: <strong>Self Employed</strong></li>
-            </ul>
-        </div>
-        <div th:if="${scheme.schemeName == 'Senior Citizen Assistance'}">
-            <ul class="criteria-list">
-                <li>Minimum Age Gate Entrance: Must be 60 Years old or older</li>
-                <li>Annual Household Wealth Limit: Under ₹3,00,000</li>
-                <li>Required Registered Employment Status: Open (Any Category Approved)</li>
-            </ul>
-        </div>
+        <form th:action="@{/eligibility/{id}/check(id=${scheme.id})}"
+              method="post"
+              enctype="multipart/form-data"
+              th:object="${beneficiary}">
+
+            <!-- ── Personal Details ── -->
+            <div class="section-heading">Personal Details</div>
+            <div class="form-grid">
+
+                <div class="field">
+                    <label>Age (years) *</label>
+                    <input type="number" th:field="*{age}" min="18" max="100" placeholder="e.g. 28" required/>
+                    <span class="hint" th:text="'Must be between ' + ${scheme.eligibleAgeMin} + ' and ' + ${scheme.eligibleAgeMax} + ' to qualify'">Age requirement</span>
+                </div>
+
+                <div class="field">
+                    <label>Annual Household Income (₹) *</label>
+                    <input type="number" th:field="*{income}" min="0" placeholder="e.g. 250000" required/>
+                    <span class="hint" th:text="'Must be ≤ ₹' + ${#numbers.formatInteger(scheme.maxIncomeThreshold, 1, 'COMMA')} + ' to qualify'">Income requirement</span>
+                </div>
+
+                <div class="field">
+                    <label>Aadhaar / PAN Number *</label>
+                    <!--
+                      FIX: Use th:field to bind to the Beneficiary object correctly.
+                      The previous template used a raw name="governmentId" input outside
+                      the th:object binding, which meant the value was never pre-populated
+                      from the registered profile and the identityPass check could silently
+                      receive an empty string if the browser cleared the field.
+                    -->
+                    <input type="text" th:field="*{governmentId}" placeholder="12-digit Aadhaar or PAN" required/>
+                    <span class="hint">Pre-filled from your profile</span>
+                </div>
+
+                <div class="field full">
+                    <label>Residential Address *</label>
+                    <input type="text" th:field="*{address}" placeholder="House No., Street, City, PIN" required/>
+                </div>
+
+            </div>
+
+            <!-- ── Scheme-Specific Eligibility ── -->
+            <div class="section-heading" th:if="${scheme.occupationRestricted or scheme.genderRestricted or scheme.requiresDisability or scheme.residenceRestricted}">
+                Scheme-Specific Eligibility
+            </div>
+            <div class="form-grid">
+
+                <div class="field" th:if="${scheme.occupationRestricted}">
+                    <label>Occupation *</label>
+                    <input type="text" th:field="*{occupation}" placeholder="e.g. Student, Farmer" required/>
+                    <span class="hint" th:text="'Required: ' + ${scheme.requiredOccupation}">Occupation requirement</span>
+                </div>
+
+                <div class="field" th:if="${scheme.genderRestricted}">
+                    <label>Gender *</label>
+                    <select th:field="*{gender}" required>
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <span class="hint" th:text="'Required: ' + ${scheme.requiredGender}">Gender requirement</span>
+                </div>
+
+                <div class="field" th:if="${scheme.requiresDisability}">
+                    <label>Disability Status (PwD) *</label>
+                    <select th:field="*{disabilityStatus}" required>
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                    <span class="hint">Required: Yes (PwD)</span>
+                </div>
+
+                <div class="field" th:if="${scheme.residenceRestricted}">
+                    <label>Residence Type *</label>
+                    <select th:field="*{residenceType}" required>
+                        <option value="">-- Select --</option>
+                        <option value="Urban">Urban</option>
+                        <option value="Rural">Rural</option>
+                    </select>
+                    <span class="hint" th:text="'Required: ' + ${scheme.requiredResidenceType}">Residence requirement</span>
+                </div>
+
+            </div>
+
+            <!-- ── Document Upload ── -->
+            <div class="section-heading">Supporting Documents</div>
+            <div class="upload-box">
+                <h4>📎 Attach Required Verification Documents</h4>
+                <div class="upload-grid">
+                    <div class="upload-field">
+                        <label>1. Aadhaar Card (PDF / JPEG) *</label>
+                        <input type="file" name="aadhaarFile" accept=".pdf,.jpg,.jpeg,.png" required/>
+                    </div>
+                    <div class="upload-field">
+                        <label>2. Bank Passbook Copy *</label>
+                        <input type="file" name="bankFile" accept=".pdf,.jpg,.jpeg,.png" required/>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                🔍 Check Eligibility Score &amp; Submit Application
+            </button>
+        </form>
     </div>
-
-    <form th:action="@{/eligibility/{id}/check(id=${scheme.id})}" th:object="${beneficiary}" method="post">
-        <div class="field-group">
-            <label>Enter Your Current Age (Years)</label>
-            <input type="number" th:field="*{age}" min="18" max="100" placeholder="e.g. 25" required>
-        </div>
-        <div class="field-group">
-            <label>Annual Gross Household Income (INR)</label>
-            <input type="number" th:field="*{income}" min="0" placeholder="₹ Family revenue" required>
-        </div>
-        <div class="field-group">
-            <label>Primary Identity Key (Aadhaar / PAN Card)</label>
-            <input type="text" th:field="*{governmentId}" placeholder="Enter Aadhaar or PAN Card Key" required>
-            <div sec:authorize="isAuthenticated()" class="input-hint" style="color:var(--sagar-saffron-dark); font-weight:500;">Note: Must match the unique key used at the time of account registration.</div>
-        </div>
-        <div class="field-group">
-            <label>Current Employment / Occupation Status</label>
-            <input type="text" th:field="*{occupation}" readonly="readonly" required>
-        </div>
-        <div class="field-group">
-            <label>Contact Mobile Number</label>
-            <input type="text" th:field="*{contactNumber}" pattern="^[6-9][0-9]{9}$" placeholder="10-digit mobile number" required>
-        </div>
-        <button type="submit" class="form-submit-btn">Run Pipeline Evaluation Math</button>
-    </form>
 </div>
 
 </body>
 </html>
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://thymeleaf.org">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>SAGAR - Grant Application Intake Hub</title>-->
+<!--    <link th:href="@{/css/style.css}" rel="stylesheet">-->
+<!--    <style>-->
+<!--        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }-->
+<!--        .form-panel-box { max-width: 700px; margin: 40px auto; background: white; padding: 35px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid #000080; }-->
+<!--        .form-row { margin-bottom: 20px; }-->
+<!--        .form-row label { display: block; font-weight: bold; margin-bottom: 6px; color: #334155; font-size: 13px; }-->
+<!--        .form-row input, .form-row select { width: 100%; padding: 10px; border: 2px solid #E2E8F0; border-radius: 6px; box-sizing: border-box; font-size: 14px; font-weight: 600; }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<div class="universal-header">-->
+<!--    <a href="/dashboard" class="brand-block">-->
+<!--        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none">-->
+<!--            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>-->
+<!--            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>-->
+<!--        </svg>-->
+<!--        <div class="brand-text">-->
+<!--            <h1>SAGAR<span>.</span></h1>-->
+<!--            <p>Subsidy &amp; Grant Administration Portal</p>-->
+<!--        </div>-->
+<!--    </a>-->
+<!--</div>-->
+
+<!--<div class="form-panel-box">-->
+<!--    <h2 style="color: #000080; margin-top: 0; margin-bottom: 5px;" th:text="'Apply for: ' + ${scheme.schemeName}">Apply for Scheme</h2>-->
+<!--    <p style="color:#6c757d; font-size:13px; margin-bottom:25px;">Please provide your demographic info, upload the required document files, and review your matrix scorecard metrics checks.</p>-->
+
+<!--    &lt;!&ndash; Inside src/main/resources/templates/eligibility-form.html &ndash;&gt;-->
+<!--    <form th:action="@{/eligibility/{id}/check(id=${scheme.id})}" method="post" enctype="multipart/form-data" th:object="${beneficiary}">-->
+
+<!--        <div class="form-row">-->
+<!--            <label>Applicant Age (Minimum 21 Years Required)</label>-->
+<!--            <input type="number" th:field="*{age}" required />-->
+<!--        </div>-->
+
+<!--        <div class="form-row">-->
+<!--            <label>Annual Household Income Limit</label>-->
+<!--            <input type="number" th:field="*{income}" required />-->
+<!--        </div>-->
+
+<!--        <div class="form-row">-->
+<!--            <label>Jurisdiction Operational State Dropdown *</label>-->
+<!--            <select name="jurisdictionState" required>-->
+<!--                <option value="">&#45;&#45; Select Your State Location &#45;&#45;</option>-->
+<!--                <option value="Andhra Pradesh">Andhra Pradesh</option>-->
+<!--                <option value="Telangana">Telangana</option>-->
+<!--                <option value="Karnataka">Karnataka</option>-->
+<!--                <option value="Tamil Nadu">Tamil Nadu</option>-->
+<!--                <option value="Maharashtra">Maharashtra</option>-->
+<!--                <option value="Gujarat">Gujarat</option>-->
+<!--                <option value="Kerala">Kerala</option>-->
+<!--                <option value="Delhi">Delhi</option>-->
+<!--                <option value="Punjab">Punjab</option>-->
+<!--                <option value="Uttar Pradesh">Uttar Pradesh</option>-->
+<!--            </select>-->
+<!--        </div>-->
+
+<!--        &lt;!&ndash; Locate this label block inside your form structure &ndash;&gt;-->
+<!--        <div class="form-group">-->
+<!--            <label for="governmentId">Government Identity Number (Aadhaar / National PAN)</label>-->
+<!--            <input type="text"-->
+<!--                   id="governmentId"-->
+<!--                   name="governmentId"-->
+<!--                   th:value="${beneficiary.governmentId}"-->
+<!--                   class="form-control"-->
+<!--                   required />-->
+<!--        </div>-->
+
+
+<!--        <div class="form-row">-->
+<!--            <label>Residential Address Line</label>-->
+<!--            <input type="text" th:field="*{address}" required />-->
+<!--        </div>-->
+
+<!--        <div style="background: #F8FAFC; border: 1px dashed #cbd5e1; padding: 20px; border-radius: 6px; margin-top: 25px; margin-bottom: 25px;">-->
+<!--            <h4>📎 Attach Verification Documents for Treasury Audit</h4>-->
+<!--            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">-->
+<!--                <div>-->
+<!--                    <label>1. Aadhaar Card (PDF/JPEG):</label>-->
+<!--                    <input type="file" name="aadhaarFile" required />-->
+<!--                </div>-->
+<!--                <div>-->
+<!--                    <label>2. Bank Passbook Copy:</label>-->
+<!--                    <input type="file" name="bankFile" required />-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        <button type="submit" class="nav-btn btn-solid" style="border: none; width: 100%; padding: 12px; font-size: 14px; cursor: pointer; font-weight: bold; background-color: #000080; color: white;">-->
+<!--            🔍 Check Eligibility Score &amp; Matrix Breakdowns-->
+<!--        </button>-->
+<!--    </form>-->
+
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->

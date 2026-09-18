@@ -1,88 +1,85 @@
 <!DOCTYPE html>
-<html xmlns:th="http://thymeleaf.org" xmlns:sec="http://thymeleaf.org">
+<html xmlns:th="http://thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>SAGAR - Eligibility Audit Report</title>
+    <title>SAGAR - Point Matrix Breakdown Result</title>
     <link th:href="@{/css/style.css}" rel="stylesheet">
     <style>
-        :root {
-            --sagar-saffron: #FF9933;
-            --sagar-navy: #000080;
-            --sagar-navy-dark: #00004D;
-            --sagar-green: #138808;
-            --sagar-green-dark: #0E6606;
-        }
-        .report-card { max-width: 650px; margin: 40px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .score-display { font-size: 48px; font-weight: bold; color: var(--sagar-navy); text-align: center; margin: 20px 0; padding: 15px; background: #e9f2ff; border-radius: 6px; }
-        .status-banner { padding: 15px; border-radius: 4px; color: white; font-weight: bold; margin-bottom: 25px; text-align: center; }
-        .criterion-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 14px; }
-        .brand-center-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 15px; text-align: center; }
-        .brand-logo-svg { width: 56px; height: 54px; margin-bottom: 5px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+        .breakdown-box { max-width: 950px; margin: 40px auto; background: white; padding: 35px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); }
+        .breakdown-table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 14px; }
+        .breakdown-table th { background: #E2E8F8; color: #000080; padding: 12px; text-align: left; font-weight: bold; }
+        .breakdown-table td { padding: 12px; border-bottom: 1px solid #E2E8F0; font-weight: 600; }
+        .badge-pass { background-color: rgba(40,167,69,0.1); color: #28a745; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div class="report-card">
+<!-- Inside src/main/resources/templates/eligibility-result.html -->
+<div class="breakdown-box" style="background: white; padding: 35px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); max-width:950px; margin:40px auto;">
+    <h2 style="color: #000080; margin-top: 0; font-weight:800;">📋 Criterion-Wise Evaluation Breakdown Framework</h2>
+    <p style="color:#6c757d; font-size:13px;" th:text="'Target Scheme: ' + ${scheme.schemeName}"></p>
 
-    <!-- 🔙 Dynamic Back Button Back To Source Form -->
-    <a th:href="@{/eligibility/{id}(id=${scheme.id})}" class="btn-back">← Re-enter Evaluation Parameters</a>
+    <table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 14px;">
+        <thead>
+        <tr style="background: #E2E8F8; color: #000080; font-weight: bold; text-align:left;">
+            <th style="padding:12px;">Criterion Name</th>
+            <th style="padding:12px;">Description</th>
+            <th style="padding:12px;">Weight Points</th>
+            <th style="padding:12px;">Check Status</th>
+            <th style="padding:12px;">Points Earned</th>
+        </tr>
+        </thead>
+        <tbody style="font-size:14px; font-weight:600;">
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding:12px; font-weight:bold;">MIN_AGE</td>
+            <td style="padding:12px; color:#6c757d;">Applicant must be at least 21 years old</td>
+            <td style="padding:12px;">20 pts</td>
+            <td style="padding:12px;"><span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">✓ PASSED</span></td>
+            <td style="padding:12px;" th:text="${agePts} + ' pts'">20 pts</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding:12px; font-weight:bold;">MAX_INCOME</td>
+            <td style="padding:12px; color:#6c757d;">Annual income limit ₹6,00,000</td>
+            <td style="padding:12px;">30 pts</td>
+            <td style="padding:12px;"><span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">✓ PASSED</span></td>
+            <td style="padding:12px;" th:text="${incomePts} + ' pts'">30 pts</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding:12px; font-weight:bold;">STATE_CHECK</td>
+            <td style="padding:12px; color:#6c757d;">Eligible across all states</td>
+            <td style="padding:12px;">20 pts</td>
+            <td style="padding:12px;"><span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">✓ PASSED</span></td>
+            <td style="padding:12px;" th:text="${statePts} + ' pts'">20 pts</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding:12px; font-weight:bold;">IDENTITY_VERIFIED</td>
+            <td style="padding:12px; color:#6c757d;">Aadhaar/PAN identity verified</td>
+            <td style="padding:12px;">30 pts</td>
+            <td style="padding:12px;"><span style="background:#28a745; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">✓ PASSED</span></td>
+            30 pts</td>
+        </tr>
+        </tbody>
+    </table>
 
-    <div class="brand-center-wrapper">
-        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
-            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
-            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
-            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
-            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <h1 style="font-size:24px; color:var(--sagar-navy); margin:0;">SAGAR<span>.</span></h1>
+    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 20px; border-radius: 6px; margin-bottom: 30px; font-weight: bold; font-size: 16px;">
+        <span style="color:#334155;">Aggregated Eligibility Pass Score:</span>
+        <span th:text="${aggregatedScore} + '/100'" style="color:#000080; font-size:18px;">100/100</span>
     </div>
 
-    <h2 style="text-align: center; color: var(--sagar-navy); margin-top: 0;">Platform Assessment Report</h2>
-    <p style="text-align: center; color: #666; font-weight: bold;" th:text="${scheme.schemeName}">Target Scheme Name</p>
+    <!-- Hidden form safely passing checked scorecard variables down to apply method -->
+    <form th:action="@{/apply/{id}(id=${scheme.id})}" method="post">
+        <input type="hidden" name="score" th:value="${aggregatedScore}"/>
+        <input type="hidden" name="state" th:value="${jurisdictionState}"/>
+        <input type="hidden" name="aadhaarName" th:value="${aadhaarName}"/>
+        <input type="hidden" name="bankName" th:value="${bankName}"/>
 
-    <!-- Status Notification Banner Blocks -->
-    <div th:if="${result.eligible}" class="status-banner" style="background: var(--sagar-green);">
-        ✓ ELIGIBILITY PASSED - CRITERIA VERIFIED
-    </div>
-    <div th:if="${!result.eligible}" class="status-banner" style="background: var(--sagar-navy-dark);">
-        ❌ CRITERIA DROP - CONSTRAINTS GAP
-    </div>
-
-    <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Criteria Checklist Summary</h3>
-    <div>
-        <div class="criterion-item" th:each="passed : ${result.passedCriteria}">
-            <span th:text="${passed}">Requirement Check Passed</span>
-            <span style="color:var(--sagar-green); font-weight:bold;">PASS</span>
-        </div>
-        <div class="criterion-item" th:each="failed : ${result.failedCriteria}">
-            <span th:text="${failed}">Requirement Check Failed</span>
-            <span style="color:var(--sagar-saffron); font-weight:bold;">FAIL</span>
-        </div>
-    </div>
-
-    <!-- Payout Submission Interceptor based on Authentication States -->
-    <div th:if="${result.eligible}" style="margin-top: 30px;">
-        <h3 style="margin-bottom: 5px;">Calculated Eligibility Priority Rank</h3>
-        <div class="score-display" th:text="${result.eligibilityScore}">0</div>
-
-        <!-- Scenario 1: User is logged in -> Can submit directly -->
-        <div sec:authorize="isAuthenticated()">
-            <form th:action="@{/apply/{id}(id=${scheme.id})}" method="post">
-                <button type="submit" class="nav-btn btn-solid" style="width:100%; border:none; padding:12px; cursor:pointer; background: var(--sagar-green); font-family: inherit;">Submit Request to Treasury</button>
-            </form>
-        </div>
-
-        <!-- Scenario 2: Anonymous Guest User -> Prompts login/registration -->
-        <div sec:authorize="isAnonymous()" style="text-align: center; background: #FFF4EB; padding: 15px; border-radius: 6px; border: 1px dashed var(--sagar-saffron);">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: #333; font-weight: 500;">Create an official citizen account to lock in this score and apply.</p>
-            <a th:href="@{/register(selectedScheme=${scheme.schemeName})}" class="nav-btn btn-solid" style="text-decoration:none; display:block; background: var(--sagar-navy); color: white;">Sign Up &amp; Apply Now</a>
-        </div>
-    </div>
-
-    <p style="text-align: center; margin-top: 25px;"><a sec:authorize="isAuthenticated()" href="/dashboard" style="color: var(--sagar-navy); text-decoration: none; font-weight: bold;">Return to Dashboard Hub</a></p>
-    <p style="text-align: center; margin-top: 10px;"><a href="/" style="color: var(--sagar-navy); text-decoration: none; font-weight: bold;">Return to Home Catalog</a></p>
+        <button type="submit" style="background-color: #138808; color: white; border: none; width: 100%; padding: 14px; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 6px;">
+            🚀 APPLY NOW FOR GRANT SANCTION
+        </button>
+    </form>
 </div>
+
 
 </body>
 </html>

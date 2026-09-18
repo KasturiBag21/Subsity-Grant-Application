@@ -83,10 +83,9 @@
 </head>
 <body>
 
-<!-- 🧭 Navbar Section Layout -->
+<!-- Navbar -->
 <div class="universal-header">
     <a href="/" class="brand-block">
-        <!-- FIX: Embedded matching SAGAR Vector Emblem Layout -->
         <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
             <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
             <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
@@ -117,13 +116,20 @@
 
     <div class="form-card-wide">
         <h2 style="margin: 0; color: var(--sagar-saffron); font-size: 28px;">Register</h2>
-        <!-- FIX: Sub-text aligned dynamically to platform role name specs -->
         <p style="margin: 5px 0 15px 0; color: #6c757d; font-size: 14px;">Create your account on the SAGAR administration platform.</p>
 
         <div th:if="${error}" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; font-weight: 500;" th:text="${error}"></div>
 
         <form th:action="@{/register}" th:object="${user}" method="post">
             <div class="form-grid">
+
+                <!-- ADDED: Full Name — spans full width so it's prominent -->
+                <div class="form-field" style="grid-column: span 2;">
+                    <label>Full Name (As per Aadhaar)</label>
+                    <input type="text" th:field="*{fullName}" placeholder="e.g. Rajesh Kumar Sharma" required>
+                    <div class="validation-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                </div>
+
                 <div class="form-field">
                     <label>Account Email (Used as Login ID)</label>
                     <input type="email" th:field="*{email}" placeholder="name@domain.com" required>
@@ -143,9 +149,7 @@
                     <label>Primary Desired Subsidy Scheme</label>
                     <select th:field="*{schemeName}" required>
                         <option value="">-- Choose Initial Program Track --</option>
-                        <option value="Education Subsidy">Education Subsidy</option>
-                        <option value="Farmer Support Grant">Farmer Support Grant</option>
-                        <option value="Housing Assistance Scheme">Housing Assistance Scheme</option>
+                        <option th:each="sch : ${schemes}" th:value="${sch.schemeName}" th:text="${sch.schemeName}"></option>
                     </select>
                 </div>
                 <div class="form-field">
@@ -162,13 +166,85 @@
                     <input type="text" th:field="*{occupation}" placeholder="e.g. Farmer, Student, Self Employed" required>
                 </div>
                 <div class="form-field">
+                    <label>Gender</label>
+                    <select th:field="*{gender}" required>
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <div class="validation-error" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></div>
+                </div>
+                <div class="form-field">
+                    <label>Disability Status (PwD)</label>
+                    <select th:field="*{disabilityStatus}" required>
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                    <div class="validation-error" th:if="${#fields.hasErrors('disabilityStatus')}" th:errors="*{disabilityStatus}"></div>
+                </div>
+                <div class="form-field">
+                    <label>Residence Type</label>
+                    <select th:field="*{residenceType}" required>
+                        <option value="">-- Select --</option>
+                        <option value="Urban">Urban</option>
+                        <option value="Rural">Rural</option>
+                    </select>
+                    <div class="validation-error" th:if="${#fields.hasErrors('residenceType')}" th:errors="*{residenceType}"></div>
+                </div>
+
+                <!-- ADDED: State dropdown — replaces nothing, sits alongside address -->
+                <div class="form-field">
+                    <label>State</label>
+                    <select th:field="*{state}" required>
+                        <option value="">-- Select Your State --</option>
+                        <option value="Andhra Pradesh">Andhra Pradesh</option>
+                        <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                        <option value="Assam">Assam</option>
+                        <option value="Bihar">Bihar</option>
+                        <option value="Chhattisgarh">Chhattisgarh</option>
+                        <option value="Goa">Goa</option>
+                        <option value="Gujarat">Gujarat</option>
+                        <option value="Haryana">Haryana</option>
+                        <option value="Himachal Pradesh">Himachal Pradesh</option>
+                        <option value="Jharkhand">Jharkhand</option>
+                        <option value="Karnataka">Karnataka</option>
+                        <option value="Kerala">Kerala</option>
+                        <option value="Madhya Pradesh">Madhya Pradesh</option>
+                        <option value="Maharashtra">Maharashtra</option>
+                        <option value="Manipur">Manipur</option>
+                        <option value="Meghalaya">Meghalaya</option>
+                        <option value="Mizoram">Mizoram</option>
+                        <option value="Nagaland">Nagaland</option>
+                        <option value="Odisha">Odisha</option>
+                        <option value="Punjab">Punjab</option>
+                        <option value="Rajasthan">Rajasthan</option>
+                        <option value="Sikkim">Sikkim</option>
+                        <option value="Tamil Nadu">Tamil Nadu</option>
+                        <option value="Telangana">Telangana</option>
+                        <option value="Tripura">Tripura</option>
+                        <option value="Uttar Pradesh">Uttar Pradesh</option>
+                        <option value="Uttarakhand">Uttarakhand</option>
+                        <option value="West Bengal">West Bengal</option>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Jammu &amp; Kashmir">Jammu &amp; Kashmir</option>
+                        <option value="Ladakh">Ladakh</option>
+                        <option value="Puducherry">Puducherry</option>
+                    </select>
+                    <div class="validation-error" th:if="${#fields.hasErrors('state')}" th:errors="*{state}"></div>
+                </div>
+
+                <div class="form-field">
                     <label>Permanent Residential Address</label>
                     <input type="text" th:field="*{address}" placeholder="Full residential details" required>
                 </div>
+
                 <div class="form-field" style="grid-column: span 2;">
                     <label>Secure Access Password</label>
                     <input type="password" th:field="*{password}" placeholder="••••••••" required>
                 </div>
+
                 <button type="submit" class="register-submit-btn">Complete Portal Registration</button>
             </div>
         </form>
@@ -178,3 +254,187 @@
 
 </body>
 </html>
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://thymeleaf.org">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>SAGAR - Citizen Registration Console</title>-->
+<!--    <link th:href="@{/css/style.css}" rel="stylesheet">-->
+<!--    <style>-->
+<!--        .split-canvas-wide {-->
+<!--            display: grid;-->
+<!--            grid-template-columns: 1fr 1.2fr;-->
+<!--            max-width: 1300px;-->
+<!--            margin: 40px auto;-->
+<!--            gap: 40px;-->
+<!--            padding: 0 20px;-->
+<!--            align-items: center;-->
+<!--        }-->
+<!--        @media (max-width: 992px) {-->
+<!--            .split-canvas-wide { grid-template-columns: 1fr; }-->
+<!--            .marketing-banner-orange { display: none; }-->
+<!--        }-->
+
+<!--        /* Left Hand Marketing Section */-->
+<!--        .marketing-banner-orange {-->
+<!--            position: relative;-->
+<!--            background: linear-gradient(rgba(255, 153, 51, 0.1), rgba(0, 0, 128, 0.15)),-->
+<!--            url('https://unsplash.com') center/cover;-->
+<!--            height: 520px;-->
+<!--            border-radius: 16px;-->
+<!--            box-shadow: 0 8px 24px rgba(0,0,0,0.05);-->
+<!--            overflow: hidden;-->
+<!--        }-->
+<!--        .traditional-badge-orange {-->
+<!--            position: absolute;-->
+<!--            bottom: 30px;-->
+<!--            left: 30px;-->
+<!--            background: rgba(255, 255, 255, 0.95);-->
+<!--            padding: 20px 30px;-->
+<!--            border-radius: 8px;-->
+<!--            box-shadow: 0 4px 20px rgba(0,0,0,0.1);-->
+<!--        }-->
+<!--        .traditional-badge-orange h3 { margin: 0; color: #000080; font-size: 24px; }-->
+<!--        .traditional-badge-orange p { margin: 5px 0 0 0; color: #ff9933; font-weight: bold; font-size: 16px; }-->
+
+<!--        /* Right Hand Registration Form Card */-->
+<!--        .form-card-wide {-->
+<!--            background: white;-->
+<!--            padding: 35px;-->
+<!--            border-radius: 12px;-->
+<!--            box-shadow: 0 10px 30px rgba(0,0,0,0.04);-->
+<!--            border-top: 4px solid var(&#45;&#45;sagar-saffron);-->
+<!--        }-->
+<!--        .form-grid {-->
+<!--            display: grid;-->
+<!--            grid-template-columns: 1fr 1fr;-->
+<!--            gap: 15px 20px;-->
+<!--            margin-top: 20px;-->
+<!--        }-->
+<!--        @media (max-width: 576px) { .form-grid { grid-template-columns: 1fr; } }-->
+
+<!--        .form-field { display: flex; flex-direction: column; }-->
+<!--        .form-field label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #444; }-->
+<!--        .form-field input, .form-field select { padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }-->
+<!--        .form-field input:focus, .form-field select:focus { border-color: var(&#45;&#45;sagar-saffron); }-->
+<!--        .validation-error { color: #dc3545; font-size: 11px; font-weight: bold; margin-top: 3px; }-->
+
+<!--        .register-submit-btn {-->
+<!--            grid-column: span 2;-->
+<!--            background: var(&#45;&#45;sagar-saffron);-->
+<!--            color: white;-->
+<!--            padding: 12px;-->
+<!--            border: none;-->
+<!--            border-radius: 6px;-->
+<!--            font-size: 16px;-->
+<!--            font-weight: bold;-->
+<!--            cursor: pointer;-->
+<!--            margin-top: 15px;-->
+<!--            transition: background 0.2s;-->
+<!--        }-->
+<!--        .register-submit-btn:hover { background: var(&#45;&#45;sagar-saffron-dark); }-->
+<!--        @media (max-width: 576px) { .register-submit-btn { grid-column: span 1; } }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--&lt;!&ndash; 🧭 Navbar Section Layout &ndash;&gt;-->
+<!--<div class="universal-header">-->
+<!--    <a href="/" class="brand-block">-->
+<!--        &lt;!&ndash; FIX: Embedded matching SAGAR Vector Emblem Layout &ndash;&gt;-->
+<!--        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">-->
+<!--            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>-->
+<!--            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>-->
+<!--            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>-->
+<!--            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>-->
+<!--            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>-->
+<!--        </svg>-->
+<!--        <div class="brand-text">-->
+<!--            <h1>SAGAR<span>.</span></h1>-->
+<!--            <p>Subsidy &amp; Grant Administration</p>-->
+<!--        </div>-->
+<!--    </a>-->
+<!--    <div class="nav-panel">-->
+<!--        <a href="/">Home</a>-->
+<!--        <a href="/#schemes">Schemes</a>-->
+<!--        <a href="/login" class="nav-btn btn-outline">Login Portal</a>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<div class="split-canvas-wide">-->
+<!--    <div class="marketing-banner-orange">-->
+<!--        <div class="traditional-badge-orange">-->
+<!--            <h3>आसान आवेदन</h3>-->
+<!--            <p>सशक्त नागरिक</p>-->
+<!--            <div style="font-size:12px; color:#555; margin-top:6px; font-weight: 500;">सरकारी योजनाओं का लाभ सीधे बैंक खाते में पाएं</div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <div class="form-card-wide">-->
+<!--        <h2 style="margin: 0; color: var(&#45;&#45;sagar-saffron); font-size: 28px;">Register</h2>-->
+<!--        &lt;!&ndash; FIX: Sub-text aligned dynamically to platform role name specs &ndash;&gt;-->
+<!--        <p style="margin: 5px 0 15px 0; color: #6c757d; font-size: 14px;">Create your account on the SAGAR administration platform.</p>-->
+
+<!--        <div th:if="${error}" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; font-weight: 500;" th:text="${error}"></div>-->
+
+<!--        <form th:action="@{/register}" th:object="${user}" method="post">-->
+<!--            <div class="form-grid">-->
+<!--                <div class="form-field">-->
+<!--                    <label>Account Email (Used as Login ID)</label>-->
+<!--                    <input type="email" th:field="*{email}" placeholder="name@domain.com" required>-->
+<!--                    <div class="validation-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Contact Mobile Number</label>-->
+<!--                    <input type="text" th:field="*{contactNumber}" placeholder="10-digit mobile" required>-->
+<!--                    <div class="validation-error" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></div>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Aadhaar Number / Government ID</label>-->
+<!--                    <input type="text" th:field="*{governmentId}" placeholder="e.g. ABCD12345E" required>-->
+<!--                    <div class="validation-error" th:if="${#fields.hasErrors('governmentId')}" th:errors="*{governmentId}"></div>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Primary Desired Subsidy Scheme</label>-->
+<!--                    <select th:field="*{schemeName}" required>-->
+<!--                        <option value="">&#45;&#45; Choose Initial Program Track &#45;&#45;</option>-->
+<!--                        <option value="Education Subsidy">Education Subsidy</option>-->
+<!--                        <option value="Farmer Support Grant">Farmer Support Grant</option>-->
+<!--                        <option value="Housing Assistance Scheme">Housing Assistance Scheme</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Age Profile (Years)</label>-->
+<!--                    <input type="number" th:field="*{age}" placeholder="Age" required>-->
+<!--                    <div class="validation-error" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></div>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Annual Household Income (INR)</label>-->
+<!--                    <input type="number" th:field="*{income}" placeholder="₹ Total Family Revenue" required>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Current Occupation</label>-->
+<!--                    <input type="text" th:field="*{occupation}" placeholder="e.g. Farmer, Student, Self Employed" required>-->
+<!--                </div>-->
+<!--                <div class="form-field">-->
+<!--                    <label>Permanent Residential Address</label>-->
+<!--                    <input type="text" th:field="*{address}" placeholder="Full residential details" required>-->
+<!--                </div>-->
+<!--                <div class="form-field" style="grid-column: span 2;">-->
+<!--                    <label>Secure Access Password</label>-->
+<!--                    <input type="password" th:field="*{password}" placeholder="••••••••" required>-->
+<!--                </div>-->
+<!--                <button type="submit" class="register-submit-btn">Complete Portal Registration</button>-->
+<!--            </div>-->
+<!--        </form>-->
+<!--        <p style="text-align: center; font-size: 14px; color: #555; margin-top: 25px;">Already have an account? <a href="/login" style="color: var(&#45;&#45;sagar-saffron); font-weight: bold; text-decoration: none;">Login here</a></p>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->

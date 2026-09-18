@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Citizen Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { background: #F1F5F9; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; color: #1E293B; }
+
+        /* ── Header ── */
+        .site-header {
+            background: #fff;
+            padding: 14px 40px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.10);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #E67E22;
+            position: sticky; top: 0; z-index: 200;
+        }
+        .brand h1 { margin: 0; font-size: 22px; color: #000080; font-weight: 800; }
+        .brand h1 span { color: #E67E22; }
+        .brand p  { margin: 2px 0 0; font-size: 10px; color: #94A3B8; text-transform: uppercase; font-weight: 600; letter-spacing: .5px; }
+
+        .nav-right { display: flex; align-items: center; gap: 14px; }
+
+        /* ── Profile circle ── */
+        .profile-trigger {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: #000080;
+            color: white;
+            font-weight: 800;
+            font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            border: 2px solid #E67E22;
+            position: relative;
+            user-select: none;
+        }
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.12);
+            min-width: 220px;
+            z-index: 300;
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+        }
+        .profile-trigger:focus-within .profile-dropdown,
+        .profile-trigger.open .profile-dropdown { display: block; }
+
+        .profile-dropdown .pd-header {
+            padding: 14px 16px;
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .pd-header .pd-name  { font-weight: 700; font-size: 14px; color: #1E293B; }
+        .pd-header .pd-email { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+
+        .pd-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            text-decoration: none;
+        }
+        .pd-item:hover { background: #F1F5F9; }
+        .pd-item.danger { color: #EF4444; }
+        .pd-divider { height: 1px; background: #E2E8F0; }
+
+        .logout-form { margin: 0; }
+
+        /* ── Main ── */
+        main { max-width: 1160px; margin: 36px auto; padding: 0 20px; }
+
+        .welcome-card {
+            background: #fff;
+            padding: 22px 28px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            margin-bottom: 28px;
+            border-left: 5px solid #E67E22;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .welcome-card h2 { margin: 0; color: #000080; font-size: 20px; font-weight: 800; }
+        .welcome-card p  { margin: 4px 0 0; font-size: 12px; color: #94A3B8; text-transform: uppercase; font-weight: 700; letter-spacing: .4px; }
+
+        .success-banner {
+            background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px;
+            padding: 12px 18px; font-size: 13px; font-weight: 600; color: #166534;
+            margin-bottom: 20px;
+        }
+
+        /* ── Section heading ── */
+        .section-title { color: #000080; font-size: 16px; font-weight: 800; margin: 0 0 4px; }
+        .section-sub   { color: #64748B; font-size: 12.5px; margin: 0 0 20px; }
+
+        /* ── Scheme cards ── */
+        .schemes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 36px;
+        }
+        .scheme-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            border-top: 3px solid #000080;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        .scheme-card .badge {
+            display: inline-block;
+            background: #000080; color: white;
+            padding: 2px 8px; border-radius: 4px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .scheme-card h4 { margin: 0 0 4px; font-size: 16px; color: #000080; font-weight: 800; }
+        .scheme-card p  { margin: 0; font-size: 12px; color: #64748B; line-height: 1.5; }
+        .apply-btn {
+            display: block;
+            text-align: center;
+            background: #E67E22;
+            color: white;
+            padding: 9px;
+            border-radius: 7px;
+            font-weight: 700;
+            font-size: 13px;
+            text-decoration: none;
+            transition: background .15s;
+        }
+        .apply-btn:hover { background: #D35400; }
+
+        /* ── Tracking table ── */
+        .table-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            margin-bottom: 36px;
+        }
+        .app-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .app-table thead tr { border-bottom: 2px solid #E2E8F0; }
+        .app-table thead th { padding: 10px 12px; color: #64748B; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: .4px; text-align: left; }
+        .app-table tbody tr { border-bottom: 1px solid #F1F5F9; transition: background .1s; }
+        .app-table tbody tr:hover { background: #F8FAFC; }
+        .app-table tbody td { padding: 13px 12px; vertical-align: middle; }
+        .track-id { font-weight: 800; color: #000080; }
+        .score-val { font-weight: 700; color: #E67E22; }
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .pill-field    { background: #FFF7ED; color: #C2410C; }
+        .pill-district { background: #EFF6FF; color: #1D4ED8; }
+        .pill-finance  { background: #F5F3FF; color: #6D28D9; }
+        .pill-approved { background: #F0FDF4; color: #166534; }
+        .pill-rejected { background: #FEF2F2; color: #991B1B; }
+        .empty-state { padding: 36px; text-align: center; color: #CBD5E1; font-weight: 600; font-size: 13px; }
+
+        /* ── Edit Profile Modal ── */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 14px;
+            padding: 32px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,.2);
+            position: relative;
+        }
+        .modal h3 { margin: 0 0 6px; color: #000080; font-size: 18px; font-weight: 800; }
+        .modal > p { margin: 0 0 24px; color: #64748B; font-size: 13px; }
+        .modal-close {
+            position: absolute; top: 16px; right: 16px;
+            background: #F1F5F9; border: none; border-radius: 50%;
+            width: 30px; height: 30px; cursor: pointer;
+            font-size: 16px; color: #64748B;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-close:hover { background: #E2E8F0; }
+
+        .mfield { display: flex; flex-direction: column; margin-bottom: 16px; }
+        .mfield label { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+        .mfield input, .mfield select {
+            padding: 10px 12px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 7px;
+            font-size: 13.5px;
+            outline: none;
+            transition: border .2s;
+        }
+        .mfield input:focus, .mfield select:focus { border-color: #E67E22; }
+
+        .mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+        @media (max-width: 480px) { .mgrid { grid-template-columns: 1fr; } }
+
+        .save-btn {
+            width: 100%; padding: 12px;
+            background: #000080; color: white;
+            border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; margin-top: 8px;
+            transition: background .15s;
+        }
+        .save-btn:hover { background: #0000B3; }
+
+        .readonly-field { color: #94A3B8; font-size: 12px; margin-top: 2px; }
+
+        /* ── Profile Card ── */
+        .profile-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            margin-bottom: 28px;
+            overflow: hidden;
+        }
+        .profile-card-header {
+            background: linear-gradient(135deg, #000080, #001a99);
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .profile-avatar {
+            width: 58px; height: 58px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.15);
+            border: 2px solid #E67E22;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 800; color: white;
+            flex-shrink: 0;
+        }
+        .profile-card-header .ph-name {
+            font-size: 18px; font-weight: 800; color: white; margin: 0;
+        }
+        .profile-card-header .ph-email {
+            font-size: 12px; color: rgba(255,255,255,.7); margin-top: 3px;
+        }
+        .profile-card-header .edit-profile-btn {
+            margin-left: auto;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.3);
+            color: white;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s;
+            white-space: nowrap;
+        }
+        .profile-card-header .edit-profile-btn:hover { background: rgba(255,255,255,.22); }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0;
+            padding: 0;
+        }
+        .profile-field {
+            padding: 16px 24px;
+            border-right: 1px solid #F1F5F9;
+            border-bottom: 1px solid #F1F5F9;
+        }
+        .profile-field:last-child { border-right: none; }
+        .pf-label {
+            font-size: 10px; font-weight: 800; color: #94A3B8;
+            text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px;
+        }
+        .pf-value { font-size: 14px; font-weight: 700; color: #1E293B; }
+        .pf-value.locked { color: #94A3B8; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="site-header">
+    <div class="brand">
+        <h1>SAGAR <span>Portal</span></h1>
+        <p>Government of India &mdash; Citizen Services Desk</p>
+    </div>
+    <div class="nav-right">
+        <!-- Profile Circle -->
+        <div class="profile-trigger" id="profileTrigger"
+             th:attr="title=${user != null and user.beneficiary != null and user.beneficiary.fullName != null ? user.beneficiary.fullName : user.email}">
+            <span th:text="${user != null and user.beneficiary != null and user.beneficiary.fullName != null
+                             ? #strings.toUpperCase(#strings.substring(user.beneficiary.fullName, 0, 1))
+                             : #strings.toUpperCase(#strings.substring(user.email, 0, 1))}">U</span>
+
+            <div class="profile-dropdown" id="profileDropdown">
+                <div class="pd-header">
+                    <div class="pd-name"
+                         th:text="${user != null and user.beneficiary != null and user.beneficiary.fullName != null
+                                    ? user.beneficiary.fullName : 'Citizen'}">Name</div>
+                    <div class="pd-email" th:text="${user != null ? user.email : ''}">email</div>
+                </div>
+                <button class="pd-item" onclick="openEditModal()">✏️ Edit Profile Details</button>
+                <div class="pd-divider"></div>
+                <form class="logout-form" th:action="@{/logout}" method="post">
+                    <button type="submit" class="pd-item danger">🚪 Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ── Edit Profile Modal ── -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+        <h3>Edit Profile Details</h3>
+        <p>Update your personal information. Government ID and email cannot be changed.</p>
+
+        <form th:action="@{/profile/update}" method="post">
+            <div class="mgrid">
+                <div class="mfield" style="grid-column: span 2;">
+                    <label>Full Name</label>
+                    <input type="text" name="fullName"
+                           th:value="${user != null and user.beneficiary != null ? user.beneficiary.fullName : ''}"
+                           placeholder="Full name as per Aadhaar" required>
+                </div>
+                <div class="mfield">
+                    <label>Mobile Number</label>
+                    <input type="text" name="contactNumber"
+                           th:value="${user != null and user.beneficiary != null ? user.beneficiary.contactNumber : ''}"
+                           placeholder="10-digit mobile" required>
+                </div>
+                <div class="mfield">
+                    <label>Annual Income (₹)</label>
+                    <input type="number" name="income"
+                           th:value="${user != null and user.beneficiary != null ? user.beneficiary.income : 0}"
+                           placeholder="e.g. 250000" required>
+                </div>
+                <div class="mfield">
+                    <label>Occupation</label>
+                    <input type="text" name="occupation"
+                           th:value="${user != null and user.beneficiary != null ? user.beneficiary.occupation : ''}"
+                           placeholder="e.g. Farmer, Student" required>
+                </div>
+                <div class="mfield">
+                    <label>Gender</label>
+                    <select name="gender" required>
+                        <option value="">-- Select Gender --</option>
+                        <option th:each="g : ${ {'Male','Female','Other'} }"
+                                th:value="${g}" th:text="${g}"
+                                th:selected="${user != null and user.beneficiary != null and user.beneficiary.gender == g}"></option>
+                    </select>
+                </div>
+                <div class="mfield">
+                    <label>Disability Status (PwD)</label>
+                    <select name="disabilityStatus" required>
+                        <option value="">-- Select --</option>
+                        <option th:each="d : ${ {'Yes','No'} }"
+                                th:value="${d}" th:text="${d}"
+                                th:selected="${user != null and user.beneficiary != null and user.beneficiary.disabilityStatus == d}"></option>
+                    </select>
+                </div>
+                <div class="mfield">
+                    <label>Residence Type</label>
+                    <select name="residenceType" required>
+                        <option value="">-- Select --</option>
+                        <option th:each="r : ${ {'Urban','Rural'} }"
+                                th:value="${r}" th:text="${r}"
+                                th:selected="${user != null and user.beneficiary != null and user.beneficiary.residenceType == r}"></option>
+                    </select>
+                </div>
+                <div class="mfield">
+                    <label>State</label>
+                    <select name="state" required>
+                        <option value="">-- Select State --</option>
+                        <option th:each="s : ${ {'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu &amp; Kashmir','Ladakh','Puducherry'} }"
+                                th:value="${s}" th:text="${s}"
+                                th:selected="${user != null and user.beneficiary != null and user.beneficiary.state == s}">
+                        </option>
+                    </select>
+                </div>
+                <div class="mfield" style="grid-column: span 2;">
+                    <label>Subsidy Scheme</label>
+                    <select name="schemeName" required>
+                        <option value="">-- Choose Program Track --</option>
+                        <option th:each="sch : ${schemes}"
+                                th:value="${sch.schemeName}" th:text="${sch.schemeName}"
+                                th:selected="${user != null and user.beneficiary != null and user.beneficiary.schemeName == sch.schemeName}">
+                        </option>
+                    </select>
+                </div>
+                <div class="mfield" style="grid-column: span 2;">
+                    <label>Residential Address</label>
+                    <input type="text" name="address"
+                           th:value="${user != null and user.beneficiary != null ? user.beneficiary.address : ''}"
+                           placeholder="House, Street, City, PIN" required>
+                </div>
+                <div class="mfield" style="grid-column: span 2;">
+                    <label>Government ID (Aadhaar/PAN)</label>
+                    <input type="text"
+                           th:value="${user != null and user.beneficiary != null ? user.beneficiary.governmentId : ''}"
+                           disabled>
+                    <span class="readonly-field">🔒 Cannot be changed after registration</span>
+                </div>
+            </div>
+            <button type="submit" class="save-btn">💾 Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<main>
+    <!-- Welcome Banner -->
+    <div class="welcome-card">
+        <div>
+            <h2 th:text="'Welcome, ' + (${user != null and user.beneficiary != null and user.beneficiary.fullName != null} ? ${user.beneficiary.fullName} : 'Citizen') + '!'">Welcome!</h2>
+            <p>Citizen Beneficiary Services Portal</p>
+        </div>
+    </div>
+
+    <!-- Update success banner -->
+    <div class="success-banner" th:if="${param.updated}">
+        ✅ Your profile has been updated successfully.
+    </div>
+
+    <!-- ── Profile Card ── -->
+    <div class="profile-card">
+        <div class="profile-card-header">
+            <div class="profile-avatar"
+                 th:text="${user != null and user.beneficiary != null and user.beneficiary.fullName != null
+                            ? #strings.toUpperCase(#strings.substring(user.beneficiary.fullName, 0, 1))
+                            : #strings.toUpperCase(#strings.substring(user.email, 0, 1))}">U</div>
+            <div>
+                <p class="ph-name"
+                   th:text="${user != null and user.beneficiary != null and user.beneficiary.fullName != null
+                              ? user.beneficiary.fullName : 'Citizen'}">Name</p>
+                <p class="ph-email" th:text="${user != null ? user.email : ''}">email</p>
+            </div>
+            <button class="edit-profile-btn" onclick="openEditModal()">✏️ Edit Profile</button>
+        </div>
+        <div class="profile-grid">
+            <div class="profile-field">
+                <div class="pf-label">Aadhaar / PAN</div>
+                <div class="pf-value locked"
+                     th:text="${user?.beneficiary?.governmentId != null ? user.beneficiary.governmentId : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Mobile Number</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.contactNumber != null ? user.beneficiary.contactNumber : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Age</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.age != null and user.beneficiary.age > 0 ? user.beneficiary.age + ' years' : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Annual Income</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.income != null ? '₹' + #numbers.formatInteger(user.beneficiary.income, 1, 'COMMA') : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Occupation</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.occupation != null ? user.beneficiary.occupation : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Gender</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.gender != null ? user.beneficiary.gender : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Disability Status</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.disabilityStatus != null ? user.beneficiary.disabilityStatus : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Residence Type</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.residenceType != null ? user.beneficiary.residenceType : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">State</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.state != null ? user.beneficiary.state : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Registered Scheme</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.schemeName != null ? user.beneficiary.schemeName : '—'}">—</div>
+            </div>
+            <div class="profile-field">
+                <div class="pf-label">Residential Address</div>
+                <div class="pf-value"
+                     th:text="${user?.beneficiary?.address != null ? user.beneficiary.address : '—'}">—</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheme Cards -->
+    <h3 class="section-title">🌟 Central Subsidy Programs</h3>
+    <p class="section-sub">Select a program below to check eligibility and apply.</p>
+    <div class="schemes-grid">
+        <div class="scheme-card" th:each="sch : ${schemes}">
+            <div>
+                <span class="badge">Central Program</span>
+                <h4 th:text="${sch.schemeName}">Scheme</h4>
+                <p>Government welfare grant program. Open for public eligibility checks and applications.</p>
+            </div>
+            <a th:href="@{'/eligibility/' + ${sch.id}}" class="apply-btn">Apply &amp; Check Eligibility →</a>
+        </div>
+    </div>
+
+    <!-- Tracking Table -->
+    <div class="table-card">
+        <h3 class="section-title">📜 Your Application Tracking Ledger</h3>
+        <table class="app-table">
+            <thead>
+            <tr>
+                <th>Tracking ID</th>
+                <th>Program</th>
+                <th>Score</th>
+                <th>Status</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="ledger : ${trackingLedger}">
+                <td><span class="track-id" th:text="'#SUB-' + ${ledger.id}"></span></td>
+                <td th:text="${ledger.scheme != null ? ledger.scheme.schemeName : 'Central Program'}"></td>
+                <td><span class="score-val" th:text="${ledger.eligibilityScore} + ' / 100'"></span></td>
+                <td>
+                    <span th:if="${ledger.applicationStatus?.name() == 'FIELD_VERIFICATION'}"  class="status-pill pill-field">🔍 Field Verification</span>
+                    <span th:if="${ledger.applicationStatus?.name() == 'DISTRICT_REVIEW'}"     class="status-pill pill-district">🏛️ District Review</span>
+                    <span th:if="${ledger.applicationStatus?.name() == 'FINANCE_PENDING'}"     class="status-pill pill-finance">💰 Treasury Pending</span>
+                    <span th:if="${ledger.applicationStatus?.name() == 'APPROVED'}"            class="status-pill pill-approved">✅ Approved</span>
+                    <span th:if="${ledger.applicationStatus?.name() == 'REJECTED'}"            class="status-pill pill-rejected">✗ Rejected</span>
+                </td>
+            </tr>
+            <tr th:if="${trackingLedger == null or #lists.isEmpty(trackingLedger)}">
+                <td colspan="4" class="empty-state">✨ No applications submitted yet. Choose a scheme above to get started.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+    const trigger  = document.getElementById('profileTrigger');
+    const dropdown = document.getElementById('profileDropdown');
+    const modal    = document.getElementById('editModal');
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        trigger.classList.toggle('open');
+    });
+
+    document.addEventListener('click', () => {
+        trigger.classList.remove('open');
+    });
+
+    dropdown.addEventListener('click', e => e.stopPropagation());
+
+    function openEditModal() {
+        trigger.classList.remove('open');
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditModal() {
+        modal.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeEditModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeEditModal();
+    });
+</script>
+</body>
+</html>
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html xmlns:th="http://thymeleaf.org">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>SAGAR - Beneficiary Services Portal</title>-->
+<!--    <link rel="stylesheet" th:href="@{/css/style.css}" />-->
+<!--</head>-->
+<!--<body style="background: #F8FAFC; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;">-->
+<!--<header class="universal-header">-->
+<!--    <div class="brand-block">-->
+<!--        <div class="brand-text">-->
+<!--            <h1>SAGAR <span>Portal</span></h1>-->
+<!--            <p>Government of India Subsidy Desk</p>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--    <div class="nav-panel" style="display: flex; align-items: center; gap: 15px;">-->
+<!--        <span style="font-size: 13px; font-weight: 600; color: #475569;" th:text="'Logged in as: ' + ${user != null ? user.email : #authentication.name}">User</span>-->
+<!--        <form th:action="@{/logout}" method="post" style="display: inline;">-->
+<!--            <button type="submit" class="nav-btn btn-outline" style="cursor: pointer; padding: 6px 15px;">Logout</button>-->
+<!--        </form>-->
+<!--    </div>-->
+<!--</header>-->
+<!--<main class="schemes-section" style="margin-top: 40px; max-width: 1200px;">-->
+<!--    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: var(&#45;&#45;sagar-shadow); margin-bottom: 30px; border-left: 4px solid var(&#45;&#45;sagar-saffron);">-->
+<!--        <h2 style="margin: 0; font-size: 22px; color: var(&#45;&#45;sagar-navy);">Citizen Beneficiary Services Portal</h2>-->
+<!--        <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748B; font-weight: 700; text-transform: uppercase;">Welcome to your central grant tracking space</p>-->
+<!--    </div>-->
+<!--    <h3 style="color: var(&#45;&#45;sagar-navy); margin-top: 0;">🌟 Central Subsidy Programs Registry</h3>-->
+<!--    <p style="color: #64748B; font-size: 13px; margin-top: -5px; margin-bottom: 25px;">Select an active program to check tracking parameters.</p>-->
+<!--    <div class="schemes-grid" style="margin-bottom: 40px;">-->
+<!--        <div th:each="sch : ${schemes}" class="scheme-showcase-card">-->
+<!--            <div>-->
+<!--                <span class="ministry-badge" style="background: var(&#45;&#45;sagar-navy); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">Central Program</span>-->
+<!--                <h4 style="margin: 8px 0 5px 0; font-size: 18px; color: var(&#45;&#45;sagar-navy);" th:text="${sch.schemeName}">Scheme Title</h4>-->
+<!--                <p style="font-size: 12px; color: #475569; line-height: 1.5; margin-bottom: 15px;">Central government welfare grant assistance program. Open for public profile eligibility checks.</p>-->
+<!--            </div>-->
+<!--            <a th:href="@{'/eligibility/' + ${sch.id}}" class="card-action-btn" style="display:block; text-align:center;">Apply &amp; Verify Score Matrix</a>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: var(&#45;&#45;sagar-shadow); margin-bottom: 40px;">-->
+<!--        <h3 style="color: var(&#45;&#45;sagar-navy); margin-top: 0;">📜 Your Submitted Application Tracking Ledger</h3>-->
+<!--        <table style="width: 100%; border-collapse: collapse; text-align: left;">-->
+<!--            <thead>-->
+<!--            <tr style="border-bottom: 2px solid #E2E8F0; color: var(&#45;&#45;sagar-navy); font-size: 13px; text-transform: uppercase; font-weight: 800;">-->
+<!--                <th style="padding: 10px;">Tracking ID</th><th>Program Details</th><th>Score Matrix</th><th>Pipeline Review Status</th>-->
+<!--            </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--            <th:block th:if="${trackingLedger != null}">-->
+<!--                <tr th:each="ledger : ${trackingLedger}" style="border-bottom: 1px solid #EDF2F7; font-size: 13px;">-->
+<!--                    <td style="padding: 15px; font-weight: 700; color: var(&#45;&#45;sagar-navy);" th:text="'#SUB-' + ${ledger.id}"></td>-->
+<!--                    <td style="padding: 15px;" th:text="${ledger.scheme != null ? ledger.scheme.schemeName : 'Central Program'}"></td>-->
+<!--                    <td style="padding: 15px; font-weight: 700; color: var(&#45;&#45;sagar-saffron-dark);" th:text="${ledger.eligibilityScore} + '/100'"></td>-->
+<!--                    <td style="padding: 15px;">-->
+<!--                        <th:block th:if="${ledger.applicationStatus != null}">-->
+<!--                            <span th:if="${ledger.applicationStatus.name() == 'FIELD_VERIFICATION'}" style="color: #E67E00; font-weight:700;">Under Field Verification</span>-->
+<!--                            <span th:if="${ledger.applicationStatus.name() == 'DISTRICT_REVIEW'}" style="color: #000080; font-weight:700;">Under District Appraisal</span>-->
+<!--                            <span th:if="${ledger.applicationStatus.name() == 'FINANCE_PENDING'}" style="color: #00004D; font-weight:700;">Pending Treasury Release</span>-->
+<!--                            <span th:if="${ledger.applicationStatus.name() == 'APPROVED'}" style="color: #138808; font-weight:700;">✓ Approved &amp; Disbursed</span>-->
+<!--                            <span th:if="${ledger.applicationStatus.name() == 'REJECTED'}" style="color: #EF4444; font-weight:700;">✗ Application Rejected</span>-->
+<!--                        </th:block>-->
+<!--                    </td>-->
+<!--                </tr>-->
+<!--            </th:block>-->
+<!--            <tr th:if="${trackingLedger == null or #lists.isEmpty(trackingLedger)}">-->
+<!--                <td colspan="4" style="padding: 30px; text-align: center; color: #94A3B8; font-weight: 600;">✨ You haven't filed any applications yet.</td>-->
+<!--            </tr>-->
+<!--            </tbody>-->
+<!--        </table>-->
+<!--    </div>-->
+<!--</main>-->
+<!--</body>-->
+<!--</html>-->

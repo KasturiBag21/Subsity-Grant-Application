@@ -24,13 +24,20 @@ public class SubsidyApplication {
     @Column(nullable = false)
     private boolean eligibilityStatus;
 
-    // FIX: Changed from String to Enum to power multi-level routing controls safely
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ApplicationStatus applicationStatus;
 
     @Column(nullable = false)
     private LocalDateTime applicationDate;
+
+    // MODULE 2 CONTEXTUAL ADDITIONS
+    private double sanctionAmount;
+    private int eligibilityScore;
+
+    private String aadhaarFilename;
+    private String bankPassbookFilename;
+    private String fieldInspectionRemarks;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -45,4 +52,14 @@ public class SubsidyApplication {
     public void setApplicationStatus(ApplicationStatus applicationStatus) { this.applicationStatus = applicationStatus; }
     public LocalDateTime getApplicationDate() { return applicationDate; }
     public void setApplicationDate(LocalDateTime applicationDate) { this.applicationDate = applicationDate; }
+    public double getSanctionAmount() { return sanctionAmount; }
+    public void setSanctionAmount(double sanctionAmount) { this.sanctionAmount = sanctionAmount; }
+    public int getEligibilityScore() { return eligibilityScore; }
+    public void setEligibilityScore(int eligibilityScore) { this.eligibilityScore = eligibilityScore; }
+    public String getAadhaarFilename() { return aadhaarFilename; }
+    public void setAadhaarFilename(String aadhaarFilename) { this.aadhaarFilename = aadhaarFilename; }
+    public String getBankPassbookFilename() { return bankPassbookFilename; }
+    public void setBankPassbookFilename(String bankPassbookFilename) { this.bankPassbookFilename = bankPassbookFilename; }
+    public String getFieldInspectionRemarks() { return fieldInspectionRemarks; }
+    public void setFieldInspectionRemarks(String fieldInspectionRemarks) { this.fieldInspectionRemarks = fieldInspectionRemarks; }
 }

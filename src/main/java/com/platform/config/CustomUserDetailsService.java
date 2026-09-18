@@ -3,11 +3,14 @@ package com.platform.config;
 import com.platform.user.User;
 import com.platform.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -24,14 +27,15 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         User user = userOpt.get();
 
-        // FIX: Strips pre-existing 'ROLE_' tags dynamically to prevent token formatting collisions
-        String[] parsedRoles = user.getRoles().stream()
-                .map(role -> role.startsWith("ROLE_") ? role.substring(5) : role)
-                .toArray(String[]::new);
+        // 🔍 PROFESSIONAL FIXED MAP: Explicitly transforms string roles into real Spring Granted Authorities
+        // This guarantees that Thymeleaf's sec:authorize checks pass successfully for any role string!
+        List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
 
         return org.springframework.security.core.userdetails.User.withUsername(user.getEmail())
                 .password(user.getPassword())
-                .roles(parsedRoles)
+                .authorities(authorities) // Natively registers authorities securely
                 .build();
     }
 }

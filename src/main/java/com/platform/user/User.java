@@ -1,6 +1,7 @@
 package com.platform.user;
 
 import jakarta.persistence.*;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -17,12 +18,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // 🔍 FIXED: Changing this collection initialization to a mutable HashSet allows Hibernate to write to your user_roles table!
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
-    private Set<String> roles;
+    private Set<String> roles = new HashSet<>();
 
-    // FIX: Adding CascadeType.ALL prevents 'unsaved transient instance' runtime exceptions
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Beneficiary beneficiary;
 
