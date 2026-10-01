@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Fund Utilization Analytics</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        *{box-sizing:border-box}body{background:#F1F5F9;margin:0;font-family:'Segoe UI',system-ui,sans-serif;color:#1E293B}
+        .site-header{background:#fff;padding:14px 40px;box-shadow:0 1px 4px rgba(0,0,0,.10);display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #E67E22;position:sticky;top:0;z-index:100}
+        .brand h1{margin:0;font-size:22px;color:#000080;font-weight:800}.brand h1 span{color:#E67E22}.brand p{margin:2px 0 0;font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+        .nav{display:flex;gap:10px}.nav a{font-size:12px;font-weight:700;color:#000080;text-decoration:none;padding:7px 12px;border:1px solid #E2E8F0;border-radius:6px}.nav a:hover{background:#F8FAFC}
+        main{max-width:1240px;margin:34px auto;padding:0 20px}.head{margin-bottom:22px}.head h2{margin:0;color:#000080;font-size:22px;font-weight:800}.head p{margin:5px 0 0;color:#64748B;font-size:12.5px}
+        .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}.stat{background:#fff;border-radius:10px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:3px solid #000080}.stat.orange{border-top-color:#E67E22}.stat.green{border-top-color:#138808}.stat.red{border-top-color:#EF4444}.stat .num{font-size:25px;font-weight:800;color:#000080}.stat .label{font-size:10px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+        .util{margin-top:10px;height:8px;border-radius:20px;background:#E2E8F0;overflow:hidden}.util span{display:block;height:100%;background:#138808}
+        .card{background:#fff;border-radius:10px;padding:22px 26px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:22px}.card h3{margin:0 0 5px;color:#000080;font-size:16px;font-weight:800}.sub{font-size:11.5px;color:#64748B;margin:0 0 17px}
+        table{width:100%;border-collapse:collapse;font-size:12px}th{padding:10px;background:#F8FAFC;color:#64748B;text-transform:uppercase;font-size:10px;letter-spacing:.4px;text-align:left}td{padding:11px 10px;border-bottom:1px solid #EEF2F7}tr:last-child td{border-bottom:none}.strong{font-weight:800;color:#000080}.money{font-weight:700}.bar-wrap{min-width:170px}.bar{height:8px;background:#E2E8F0;border-radius:20px;overflow:hidden}.bar span{height:100%;display:block;background:#E67E22}
+        .note{background:#EFF6FF;border:1px solid #DBEAFE;color:#1D4ED8;border-radius:7px;padding:10px 12px;font-size:11px;font-weight:600;margin-top:14px}
+        .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}.chart-card{background:#fff;border-radius:10px;padding:22px 26px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.chart-card h3{margin:0 0 5px;color:#000080;font-size:16px;font-weight:800}.chart-card .sub{font-size:11px;color:#64748B;margin:0 0 16px}.chart-row{display:grid;grid-template-columns:120px 1fr 80px;gap:9px;align-items:center;margin:12px 0}.chart-label{font-size:10px;font-weight:800;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chart-track{height:16px;background:#E2E8F0;border-radius:20px;overflow:hidden}.chart-fill{height:100%;background:#000080;border-radius:20px}.chart-fill.orange{background:#E67E22}.chart-value{font-size:10px;font-weight:900;color:#000080;text-align:right}@media(max-width:850px){.chart-grid{grid-template-columns:1fr}}
+        @media(max-width:800px){.stats{grid-template-columns:1fr 1fr}.card{overflow-x:auto}.site-header{padding:12px 18px}}@media(max-width:500px){.stats{grid-template-columns:1fr}.nav a{display:none}}
+        .fund-chart{background:#fff;border-radius:10px;padding:22px 26px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:22px}.fund-chart h3{margin:0;color:#000080}.fund-bars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:end;height:190px;margin-top:18px}.fund-col{text-align:center}.fund-bar{margin:auto;width:70%;min-height:8px;border-radius:8px 8px 0 0;background:#000080}.fund-col:nth-child(2) .fund-bar{background:#138808}.fund-col:nth-child(3) .fund-bar{background:#E67E22}.fund-value{font-size:12px;font-weight:900;margin-top:7px}.fund-label{font-size:10px;color:#64748B;font-weight:800;margin-top:4px}@media(max-width:650px){.fund-bars{height:150px}}.fund-overview{background:#fff;border-radius:10px;padding:22px 26px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:22px}.fund-overview-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}.fund-total{text-align:right}.fund-total strong{display:block;color:#000080;font-size:24px}.fund-total span{font-size:9px;color:#94A3B8;font-weight:800;text-transform:uppercase}.fund-stack{display:flex;height:36px;border-radius:9px;overflow:hidden;background:#E2E8F0;margin:18px 0 13px}.fund-stack .released{background:#138808}.fund-stack .pending{background:#E67E22}.fund-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.fund-metric{padding:11px 13px;border:1px solid #E2E8F0;border-radius:8px;background:#F8FAFC}.fund-metric strong{display:block;font-size:17px;color:#0F172A}.fund-metric span{font-size:9px;font-weight:800;color:#64748B;text-transform:uppercase}@media(max-width:650px){.fund-legend{grid-template-columns:1fr}.fund-total{text-align:left}}
+        html,body{max-width:100%;overflow-x:hidden}
+        .wrap{width:min(1120px,calc(100% - 28px));max-width:1120px;box-sizing:border-box}
+        .grid,.chart-grid,.fund-legend{min-width:0}
+        .card,.chart,.fund-overview{min-width:0;box-sizing:border-box}
+        @media(max-width:760px){.grid{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}}
+        @media(max-width:520px){.grid{grid-template-columns:1fr}.top{padding:12px 14px}}
+    </style>
+</head>
+
+<body>
+<header class="site-header">
+    <div class="brand">
+        <h1>SAGAR <span>Portal</span></h1>
+        <p>Government of India &mdash; Fund Utilization Control Desk</p>
+    </div>
+    <div class="nav">
+        <a th:if="${schemeFiltered}" href="/milestone3/analytics">📊 Overall Analytics</a>
+        <a th:href="${analyticsBackUrl}" th:text="${'← ' + analyticsBackLabel}">← Dashboard</a>
+    </div>
+</header>
+
+<main>
+    <div class="head">
+        <h2 th:text="${schemeFiltered ? 'Scheme Fund Analytics — ' + selectedSchemeName : 'Fund Utilization & Regional Analytics'}">Fund Utilization &amp; Regional Analytics</h2>
+        <p th:text="${schemeFiltered ? 'Scheme-specific view across every applicant under ' + selectedSchemeName + ': sanctions, actual releases, pending installments and regional utilization.' : 'Operational view of sanctioned funds, actual staged releases, milestone workload and utilization by scheme and beneficiary region.'}">Operational analytics.</p>
+        <div th:if="${success}" style="margin-top:12px;padding:10px 12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;color:#166534;font-size:11px;font-weight:700;" th:text="${success}">Success</div>
+        <div th:if="${error}" style="margin-top:12px;padding:10px 12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:7px;color:#991B1B;font-size:11px;font-weight:700;" th:text="${error}">Error</div>
+        <form method="post" action="/milestone3/reminders/run" th:if="${financeViewer}" style="margin-top:12px;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <button type="submit" style="border:1px solid #E2E8F0;border-radius:6px;padding:8px 12px;background:#fff;color:#000080;font-size:11px;font-weight:800;cursor:pointer;">🔔 Run Compliance Reminder Check Now</button>
+        </form>
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="num" th:text="${analytics.totalApplications}">0</div>
+            <div class="label">Applications</div>
+        </div>
+        <div class="stat">
+            <div class="num" th:text="${analytics.approvedApplications}">0</div>
+            <div class="label">Completed / Disbursed</div>
+        </div>
+        <div class="stat orange">
+            <div class="num" th:text="${'₹' + #numbers.formatDecimal(analytics.totalSanctioned,1,2)}">₹0</div><div class="label">Total Sanctioned</div></div>
+        <div class="stat green"><div class="num" th:text="${'₹' + #numbers.formatDecimal(analytics.totalReleased,1,2)}">₹0</div><div class="label">Actual Released</div></div>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><div class="num" th:text="${analytics.activePlans}">0</div><div class="label">Active Plans</div></div>
+        <div class="stat green"><div class="num" th:text="${analytics.completedPlans}">0</div><div class="label">Completed Plans</div></div>
+        <div class="stat orange"><div class="num" th:text="${analytics.pendingMilestones}">0</div><div class="label">Pending Milestones</div></div>
+        <div class="stat red"><div class="num" th:text="${analytics.overdueMilestones}">0</div><div class="label">Overdue Milestones</div></div>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><div class="num" th:text="${'₹' + #numbers.formatDecimal(analytics.totalAllocatedBudget,1,2)}">₹0</div><div class="label">Configured Scheme Budget</div></div>
+        <div class="stat orange"><div class="num" th:text="${'₹' + #numbers.formatDecimal(analytics.totalRemainingBudget,1,2)}">₹0</div><div class="label">Remaining Scheme Budget</div></div>
+        <div class="stat green"><div class="num" th:text="${#numbers.formatDecimal(analytics.budgetUtilization,1,2)} + '%'">0%</div><div class="label">Budget Utilization</div></div>
+        <div class="stat"><div class="num" th:text="${#numbers.formatDecimal(analytics.overallUtilization,1,2)} + '%'">0%</div><div class="label">Sanction-to-Release</div></div>
+    </div>
+
+    <section class="fund-overview">
+        <div class="fund-overview-head">
+            <div>
+                <h3 style="margin:0;color:#000080;">💹 Sanctioned → Released / Pending</h3>
+                <p class="sub" style="margin-top:5px;">One financial unit: released plus pending release equals the sanctioned amount.</p>
+            </div>
+            <div class="fund-total"><strong th:text="${'₹' + #numbers.formatDecimal(analytics.totalSanctioned,1,2)}">₹0</strong><span>Total Sanctioned</span></div>
+        </div>
+        <div class="fund-stack">
+            <div class="released" th:style="|width:${analytics.totalSanctioned > 0 ? (100 * analytics.totalReleased / analytics.totalSanctioned) : 0}%|"></div>
+            <div class="pending" th:style="|width:${analytics.totalSanctioned > 0 ? (100 * analytics.totalPendingRelease / analytics.totalSanctioned) : 0}%|"></div>
+        </div>
+        <div class="fund-legend">
+            <div class="fund-metric"><strong th:text="${'₹' + #numbers.formatDecimal(analytics.totalReleased,1,2)}">₹0</strong><span>Actually Released</span></div>
+            <div class="fund-metric"><strong th:text="${'₹' + #numbers.formatDecimal(analytics.totalPendingRelease,1,2)}">₹0</strong><span>Pending Release</span></div>
+            <div class="fund-metric"><strong th:text="${#numbers.formatDecimal(analytics.overallUtilization,1,2)} + '%'">0%</strong><span>Release Progress</span></div>
+        </div>
+    </section>
+    <section class="chart-grid">
+        <div class="chart-card">
+            <h3>📊 Scheme-wise Release Chart</h3>
+            <p class="sub">Actual released funds compared with sanctioned funds.</p>
+            <div th:each="row : ${analytics.schemeSummaries}" class="chart-row">
+                <div class="chart-label" th:text="${row.name}">Scheme</div>
+                <div class="chart-track"><div class="chart-fill" th:style="|width:${row.utilization > 100 ? 100 : row.utilization}%|"></div></div>
+                <div class="chart-value" th:text="${#numbers.formatDecimal(row.utilization,1,1)} + '%'">0%</div>
+            </div>
+            <div th:if="${#lists.isEmpty(analytics.schemeSummaries)}" class="sub">No scheme data available.</div>
+        </div>
+        <div class="chart-card">
+            <h3>📈 Region-wise Release Chart</h3>
+            <p class="sub">Actual released funds compared with sanctioned funds by beneficiary state.</p>
+            <div th:each="row : ${analytics.regionSummaries}" class="chart-row">
+                <div class="chart-label" th:text="${row.name}">Region</div>
+                <div class="chart-track"><div class="chart-fill orange" th:style="|width:${row.utilization > 100 ? 100 : row.utilization}%|"></div></div>
+                <div class="chart-value" th:text="${#numbers.formatDecimal(row.utilization,1,1)} + '%'">0%</div>
+            </div>
+            <div th:if="${#lists.isEmpty(analytics.regionSummaries)}" class="sub">No regional data available.</div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3>Scheme-wise Fund Utilization</h3>
+        <p class="sub">Sanctioned amount versus actual released amount across all applications.</p>
+        <table>
+            <thead><tr><th>Scheme</th><th>Applications</th><th>Allocated Budget</th><th>Remaining</th><th>Sanctioned</th><th>Released</th><th>Release / Sanction</th></tr></thead>
+            <tbody>
+            <tr th:each="row : ${analytics.schemeSummaries}">
+                <td class="strong" th:text="${row.name}">Scheme</td>
+                <td th:text="${row.applications}">0</td>
+                <td class="money" th:text="${'₹' + #numbers.formatDecimal(row.allocatedBudget,1,2)}">₹0</td>
+                <td class="money" th:text="${'₹' + #numbers.formatDecimal(row.remainingBudget,1,2)}">₹0</td>
+                <td class="money" th:text="${'₹' + #numbers.formatDecimal(row.sanctioned,1,2)}">₹0</td>
+                <td class="money" th:text="${'₹' + #numbers.formatDecimal(row.released,1,2)}">₹0</td>
+                <td class="bar-wrap">
+                    <div style="font-size:11px;font-weight:800;margin-bottom:4px;" th:text="${#numbers.formatDecimal(row.utilization,1,2)} + '%'">0%</div>
+                    <div class="bar"><span th:style="'width:' + ${row.utilization > 100 ? 100 : row.utilization} + '%'"></span></div>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(analytics.schemeSummaries)}"><td colspan="7" style="text-align:center;color:#94A3B8;padding:30px;">No scheme disbursement data available.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h3>Region-wise Fund Utilization</h3>
+        <p class="sub">Regional grouping uses the beneficiary State captured in the existing beneficiary profile.</p>
+        <table>
+            <thead><tr><th>Region / State</th><th>Applications</th><th>Sanctioned</th><th>Released</th><th>Utilization</th></tr></thead>
+            <tbody>
+            <tr th:each="row : ${analytics.regionSummaries}">
+                <td class="strong" th:text="${row.name}">State</td>
+                <td th:text="${row.applications}">0</td>
+                <td class="money" th:text="${'₹' + #numbers.formatDecimal(row.sanctioned,1,2)}">₹0</td>
+                <td class="money" th:text="${'₹' + #numbers.formatDecimal(row.released,1,2)}">₹0</td>
+                <td class="bar-wrap">
+                    <div style="font-size:11px;font-weight:800;margin-bottom:4px;" th:text="${#numbers.formatDecimal(row.utilization,1,2)} + '%'">0%</div>
+                    <div class="bar"><span th:style="'width:' + ${row.utilization > 100 ? 100 : row.utilization} + '%'"></span></div>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(analytics.regionSummaries)}"><td colspan="5" style="text-align:center;color:#94A3B8;padding:30px;">No regional data available.</td></tr>
+            </tbody>
+        </table>
+        <div class="note">ℹ️ Actual released funds are calculated from staged milestone releases. Existing legacy applications already marked as disbursed are included using their recorded sanction amount. Scheme budget remaining is maintained from Finance sanction reservations.</div>
+    </section>
+</main>
+
+</body>
+</html>

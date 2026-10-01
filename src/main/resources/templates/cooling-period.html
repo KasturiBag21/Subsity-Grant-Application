@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Cooling Period Active</title>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #F1F5F9; margin: 0; color: #1E293B; }
+        .page-wrap { max-width: 600px; margin: 80px auto; padding: 0 20px; text-align: center; }
+
+        .cooling-card { background: white; border-radius: 14px; padding: 48px 40px; box-shadow: 0 4px 20px rgba(0,0,0,.08); border-top: 4px solid #F59E0B; }
+        .cooling-icon { font-size: 60px; display: block; margin-bottom: 20px; }
+        .cooling-card h2 { margin: 0 0 12px; color: #92400E; font-size: 22px; font-weight: 800; }
+        .cooling-card p { margin: 0 0 20px; font-size: 14px; color: #64748B; line-height: 1.7; }
+
+        .date-badge { display: inline-block; background: #FEF3C7; border: 1px solid #FDE68A; color: #92400E; padding: 10px 24px; border-radius: 20px; font-size: 16px; font-weight: 800; margin: 16px 0; }
+
+        .tips-box { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 20px; text-align: left; margin: 24px 0; }
+        .tips-box h4 { margin: 0 0 12px; color: #166534; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+        .tip-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 13px; color: #475569; }
+        .tip-item:last-child { margin-bottom: 0; }
+        .tip-icon { font-size: 14px; flex-shrink: 0; }
+
+        .btn-dashboard { display: inline-block; background: #000080; color: white; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; text-decoration: none; margin-top: 8px; transition: background .15s; }
+        .btn-dashboard:hover { background: #0000B3; }
+    </style>
+</head>
+<body>
+
+<div class="universal-header">
+    <a href="/dashboard" class="brand-block">
+        <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text">
+            <h1>SAGAR<span>.</span></h1>
+            <p>Subsidy &amp; Grant Administration Portal</p>
+        </div>
+    </a>
+</div>
+
+<div class="page-wrap">
+    <div class="cooling-card">
+        <span class="cooling-icon">⏳</span>
+        <h2>Cooling Period is Active</h2>
+        <p>Your previous application was rejected and a mandatory 30-day cooling period is in effect. You cannot resubmit until the cooling period expires.</p>
+
+        <p style="margin-bottom:4px; font-size:13px; font-weight:700; color:#92400E;">Resubmission available from:</p>
+        <div class="date-badge" th:text="${coolingEndDate}">DD MMM YYYY</div>
+
+        <div class="tips-box">
+            <h4>💡 Prepare for Resubmission</h4>
+            <div class="tip-item"><span class="tip-icon">📄</span><span><strong>Income Certificate</strong> — obtain from your local revenue office or employer. Adds +5 pts.</span></div>
+            <div class="tip-item"><span class="tip-icon">🏠</span><span><strong>Residence Proof</strong> — Ration card, electricity bill, or rent agreement. Adds +5 pts.</span></div>
+            <div class="tip-item"><span class="tip-icon">📎</span><span><strong>Scheme-specific Document</strong> — varies by scheme (land record, business registration, etc.). Adds +5 pts.</span></div>
+            <div class="tip-item"><span class="tip-icon">✏️</span><span>Review and update your <strong>profile details</strong> to ensure age, income, and occupation are accurate.</span></div>
+        </div>
+
+        <a href="/dashboard/citizen" class="btn-dashboard">← Return to My Dashboard</a>
+    </div>
+</div>
+
+</body>
+</html>

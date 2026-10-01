@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Staged Disbursement Plan</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        *{box-sizing:border-box}
+        body{background:#F1F5F9;margin:0;font-family:'Segoe UI',system-ui,sans-serif;color:#1E293B}
+        .site-header{background:#fff;padding:14px 40px;box-shadow:0 1px 4px rgba(0,0,0,.10);display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #E67E22;position:sticky;top:0;z-index:100}
+        .brand h1{margin:0;font-size:22px;color:#000080;font-weight:800}.brand h1 span{color:#E67E22}.brand p{margin:2px 0 0;font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+        .nav-right{display:flex;gap:10px;align-items:center}.nav-link{font-size:12px;font-weight:700;color:#000080;text-decoration:none;padding:7px 12px;border:1px solid #E2E8F0;border-radius:6px}.nav-link:hover{background:#F8FAFC}
+        main{max-width:1200px;margin:34px auto;padding:0 20px}.back{color:#000080;text-decoration:none;font-size:13px;font-weight:700}.back:hover{color:#E67E22}
+        .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:16px 0 22px}.page-head h2{margin:0;color:#000080;font-size:22px;font-weight:800}.page-head p{margin:5px 0 0;color:#64748B;font-size:12.5px}
+        .app-meta{background:#fff;border-radius:10px;padding:18px 22px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;border-left:5px solid #E67E22}
+        .meta-label{font-size:10px;text-transform:uppercase;color:#94A3B8;font-weight:800;letter-spacing:.4px}.meta-value{margin-top:4px;font-size:14px;font-weight:800;color:#1E293B}.amount{color:#000080}
+        .flash{padding:11px 15px;border-radius:7px;font-size:12.5px;font-weight:700;margin-bottom:18px}.success{background:#F0FDF4;border:1px solid #BBF7D0;color:#166534}.error{background:#FEF2F2;border:1px solid #FECACA;color:#991B1B}
+        .section{background:#fff;border-radius:10px;padding:24px 26px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:22px}.section h3{margin:0;color:#000080;font-size:16px;font-weight:800}.section-sub{margin:5px 0 18px;color:#64748B;font-size:12px}
+        .plan-table{width:100%;border-collapse:collapse;font-size:12px}.plan-table th{padding:10px 9px;background:#F8FAFC;color:#64748B;text-transform:uppercase;font-size:10px;letter-spacing:.4px;text-align:left}.plan-table td{padding:11px 9px;border-bottom:1px solid #EEF2F7;vertical-align:top}.plan-table tr:last-child td{border-bottom:none}
+        .seq{width:30px;height:30px;border-radius:50%;background:#000080;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}.field{padding:8px 9px;border:1px solid #E2E8F0;border-radius:6px;width:100%;font:inherit;font-size:12px}.field:focus{outline:none;border-color:#E67E22}.amount-input{width:120px}.req{min-width:210px;resize:vertical;min-height:55px}
+        .status{display:inline-block;padding:4px 9px;border-radius:20px;font-size:10px;font-weight:800}.pending{background:#FFF7ED;color:#C2410C}.submitted{background:#E0F2FE;color:#0369A1}.verified{background:#DCFCE7;color:#166534}.released{background:#F0FDF4;color:#065F46}.overdue{background:#FEF2F2;color:#991B1B}
+        .btn{border:0;border-radius:7px;padding:9px 13px;font-weight:800;font-size:12px;cursor:pointer;text-decoration:none;display:inline-block}.primary{background:#000080;color:#fff}.primary:hover{background:#00004D}.orange{background:#E67E22;color:#fff}.green{background:#138808;color:#fff}.red{background:#B91C1C;color:#fff}.light{background:#F1F5F9;color:#334155}.btn:hover{filter:brightness(.97)}
+        .actions{display:flex;gap:7px;flex-wrap:wrap}.inline-form{margin-top:8px}.inline-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.small{font-size:10px;color:#94A3B8;margin-top:4px}
+        .progress{height:9px;background:#E2E8F0;border-radius:20px;overflow:hidden;margin-top:8px}.progress>span{display:block;height:100%;background:#138808}.plan-status{font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase}
+        .alert{padding:10px 12px;border-radius:7px;background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;font-size:11px;font-weight:700;margin-top:10px}
+        @media(max-width:850px){.app-meta{grid-template-columns:1fr 1fr}.section{padding:18px}.plan-table{display:block;overflow-x:auto}.page-head{flex-direction:column}}
+        @media(max-width:550px){.site-header{padding:12px 18px}.app-meta{grid-template-columns:1fr}.nav-link{display:none}}
+    </style>
+</head>
+
+<body>
+<header class="site-header">
+    <div class="brand">
+        <h1>SAGAR <span>Portal</span></h1>
+        <p>Government of India &mdash; Finance &amp; Disbursement Control Desk</p>
+    </div>
+    <div class="nav-right">
+        <a class="nav-link" th:href="@{/officer/application/{id}(id=${appId})}">👁 Application Details</a>
+        <a class="nav-link" href="/milestone3/analytics">📊 Analytics</a>
+        <a class="nav-link" href="/dashboard/officer">← Officer Dashboard</a>
+    </div>
+</header>
+
+<main>
+    <a class="back" href="/dashboard/officer">← Back to Officer Dashboard</a>
+
+    <div class="page-head">
+        <div>
+            <h2>Staged Disbursement &amp; Compliance Plan</h2>
+            <p>Configure scheduled releases, monitor compliance milestones, and record actual fund releases as part of Finance Officer operations.</p>
+        </div>
+        <div class="plan-status" th:text="${plan.status}">PLANNED</div>
+    </div>
+
+    <div class="flash success" th:if="${success}" th:text="${success}"></div>
+    <div class="flash error" th:if="${error}" th:text="${error}"></div>
+
+    <div class="app-meta">
+        <div>
+            <div class="meta-label">Application</div>
+            <div class="meta-value" th:text="|#SUB-${appId}|">#SUB-1</div>
+        </div>
+        <div>
+            <div class="meta-label">Beneficiary</div>
+            <div class="meta-value" th:text="${application.user?.beneficiary?.fullName ?: application.user?.email}">Citizen</div>
+        </div>
+        <div>
+            <div class="meta-label">Scheme</div>
+            <div class="meta-value" th:text="${schemeName}">Scheme</div>
+        </div>
+        <div>
+            <div class="meta-label">Contact</div>
+            <div class="meta-value" th:text="${beneficiary?.contactNumber ?: 'Not provided'}">Not provided</div>
+        </div>
+        <div>
+            <div class="meta-label">Sanctioned Amount</div>
+            <div class="meta-value amount" th:text="|₹${#numbers.formatDecimal(sanctionAmount,1,2)}|">₹0</div></div>
+    </div>
+
+    <section class="section">
+        <h3>1. Disbursement Schedule Configuration</h3>
+        <p class="section-sub">Milestone amounts must total the sanctioned amount. Released milestones are locked to preserve the financial audit trail.</p>
+        <div class="alert" th:if="${plan.status.name() == 'COMPLETED'}">✅ All scheduled milestones have been released. The application is financially completed.</div>
+        <div th:if="${plan.status.name() != 'COMPLETED' and plan.status.name() != 'ON_HOLD'}" style="display:flex;justify-content:flex-end;margin:0 0 12px;">
+            <form method="post" th:action="@{/milestone3/disbursement/{id}/hold(id=${appId})}" onsubmit="return confirm('Place this finance disbursement workflow on hold?');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <input type="hidden" name="remarks" value="Finance Officer placed the staged disbursement workflow on hold.">
+                <button class="btn light" type="submit">⏸ Hold Finance Workflow</button>
+            </form>
+        </div>
+        <form th:action="@{/milestone3/disbursement/{id}/save(id=${appId})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <table class="plan-table">
+                <thead><tr><th>#</th><th>Milestone</th><th>Compliance Requirement</th><th>Release Date &amp; Time</th><th>Scheduled Amount</th><th>Status</th></tr></thead>
+                <tbody>
+                <tr th:each="m,stat : ${planForm.milestones}">
+                    <td><div class="seq" th:text="${stat.count}">1</div></td>
+                    <td><input class="field" th:name="'milestones[' + ${stat.index} + '].name'" th:value="${m.name}" required th:disabled="${plan.milestones[stat.index].status.name() == 'RELEASED'}"></td>
+                    <td><textarea class="field req" th:name="'milestones[' + ${stat.index} + '].requirement'" th:text="${m.requirement}" th:disabled="${plan.milestones[stat.index].status.name() == 'RELEASED'}"></textarea></td>
+                    <td>
+                        <input class="field" type="date" th:name="'milestones[' + ${stat.index} + '].dueDate'" th:value="${m.dueDate}" required th:disabled="${plan.milestones[stat.index].status.name() == 'RELEASED'}">
+                        <input type="hidden" th:name="'milestones[' + ${stat.index} + '].dueTime'" value="10:00"><div class="small" style="margin-top:6px;font-weight:800;">Automatic release: 10:00 AM</div>
+                    </td>
+                    <td><input class="field amount-input" type="number" step="0.01" min="0" th:name="'milestones[' + ${stat.index} + '].scheduledAmount'" th:value="${m.scheduledAmount}" required th:disabled="${plan.milestones[stat.index].status.name() == 'RELEASED'}"></td>
+                    <td>
+                        <div th:if="${plan.milestones[stat.index].status.name() == 'RELEASED'}">
+                            <input type="hidden" th:name="'milestones[' + ${stat.index} + '].name'" th:value="${m.name}">
+                            <input type="hidden" th:name="'milestones[' + ${stat.index} + '].requirement'" th:value="${m.requirement}">
+                            <input type="hidden" th:name="'milestones[' + ${stat.index} + '].dueDate'" th:value="${m.dueDate}">
+                            <input type="hidden" th:name="'milestones[' + ${stat.index} + '].dueTime'" th:value="${m.dueTime}">
+                            <input type="hidden" th:name="'milestones[' + ${stat.index} + '].scheduledAmount'" th:value="${m.scheduledAmount}">
+                        </div>
+                        <span class="status released" th:if="${plan.milestones[stat.index].status.name() == 'RELEASED'}">RELEASED</span>
+                        <span class="status verified" th:if="${plan.milestones[stat.index].status.name() == 'COMPLIANCE_VERIFIED'}">VERIFIED</span>
+                        <span class="status submitted" th:if="${plan.milestones[stat.index].status.name() == 'COMPLIANCE_SUBMITTED'}">SUBMITTED</span>
+                        <span class="status overdue" th:if="${plan.milestones[stat.index].status.name() == 'OVERDUE'}">OVERDUE</span>
+                        <span class="status pending" th:if="${plan.milestones[stat.index].status.name() == 'PENDING'}">PENDING</span>
+                        <span class="status overdue" th:if="${plan.milestones[stat.index].status.name() == 'ON_HOLD'}">ON HOLD</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                <button class="btn primary" type="submit">💾 Save Schedule</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="section">
+        <h3>Disbursement Position</h3>
+        <p class="section-sub">Finance control totals for the current staged plan.</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div style="padding:13px;background:#F8FAFC;border-radius:8px;"><div class="small">Planned</div><strong th:text="'₹' + ${#numbers.formatDecimal(plan.totalPlannedAmount,1,2)}">₹0</strong></div>
+            <div style="padding:13px;background:#F0FDF4;border-radius:8px;"><div class="small">Released</div><strong th:text="'₹' + ${#numbers.formatDecimal(plan.releasedAmount,1,2)}">₹0</strong></div>
+            <div style="padding:13px;background:#FFF7ED;border-radius:8px;"><div class="small">Pending</div><strong th:text="'₹' + ${#numbers.formatDecimal(plan.pendingAmount,1,2)}">₹0</strong></div>
+        </div>
+        <div class="progress"><span th:style="'width:' + ${plan.utilizationPercentage > 100 ? 100 : plan.utilizationPercentage} + '%'" ></span></div>
+        <div class="small" th:text="${#numbers.formatDecimal(plan.utilizationPercentage,1,2)} + '% of the staged plan released'">0%</div>
+    </section>
+
+    <section class="section">
+        <h3>2. Verified Payment Destination</h3>
+        <p class="sub">Auto-filled from the bank details verified specifically for this application.</p>
+        <div class="grid">
+            <label>Account Holder<input class="field" readonly th:value="${paymentAccountHolderName ?: 'Not verified'}"></label>
+            <label>Account Number<input class="field" readonly th:value="${paymentAccountNumber ?: 'Not verified'}"></label>
+            <label>IFSC Code<input class="field" readonly th:value="${paymentIfscCode ?: 'Not verified'}"></label>
+            <label>Bank Name<input class="field" readonly th:value="${paymentBankName ?: 'Not verified'}"></label>
+        </div>
+        <p class="small" th:if="${paymentBankVerified}" style="color:#166534;font-weight:800;">✓ Finance-verified account. Release Now and automatic scheduled release will use this account.</p>
+        <h3 style="margin-top:24px;">3. Compliance &amp; Release Tracking</h3>
+        <p class="section-sub">Compliance must be verified before a milestone's scheduled funds can be released.</p>
+        <div class="alert" th:if="${plan.status.name() == 'ON_HOLD'}">
+            ⏸ This disbursement workflow is currently on hold. Resume it before submitting, verifying or releasing a milestone.
+            <form method="post" th:action="@{/milestone3/disbursement/{id}/resume(id=${appId})}" style="margin-top:8px;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn primary" type="submit">▶ Resume Finance Workflow</button>
+            </form>
+        </div>
+
+        <div th:each="m : ${plan.milestones}" style="padding:18px 0;border-bottom:1px solid #EEF2F7;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                <div>
+                    <div style="font-weight:800;color:#000080;font-size:14px;" th:text="${m.sequenceNo + '. ' + m.milestoneName}">1. Documentation Compliance</div>
+                    <div class="small" th:text="${m.complianceRequirement}">Requirement</div>
+                    <div class="small" th:text="${'Scheduled release: ' + #temporals.format(m.dueDate,'dd MMM yyyy') + ' at ' + #temporals.format(m.dueTime,'hh:mm a')}">Scheduled release</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:12px;font-weight:800;color:#000080;" th:text="${'₹' + #numbers.formatDecimal(m.releasedAmount,1,2) + ' / ₹' + #numbers.formatDecimal(m.scheduledAmount,1,2)}">₹0 / ₹0</div>
+                    <span class="status released" th:if="${m.status.name() == 'RELEASED'}">RELEASED</span>
+                    <span class="status verified" th:if="${m.status.name() == 'COMPLIANCE_VERIFIED'}">COMPLIANCE VERIFIED</span>
+                    <span class="status submitted" th:if="${m.status.name() == 'COMPLIANCE_SUBMITTED'}">COMPLIANCE SUBMITTED</span>
+                    <span class="status overdue" th:if="${m.status.name() == 'OVERDUE'}">OVERDUE</span>
+                    <span class="status pending" th:if="${m.status.name() == 'PENDING'}">PENDING</span>
+                    <span class="status overdue" th:if="${m.status.name() == 'ON_HOLD'}">ON HOLD</span>
+                </div>
+            </div>
+
+            <div class="progress"><span th:style="'width:' + ${m.scheduledAmount > 0 ? (m.releasedAmount * 100.0 / m.scheduledAmount) : 0} + '%'"></span></div>
+
+            <div class="alert" th:if="${m.isOverdue() and m.status.name() != 'RELEASED'}">⚠️ This milestone is overdue. Compliance action is required.</div>
+            <div class="small" th:if="${m.lastReminderAt != null}" th:text="${'Automated reminder: ' + m.lastReminderType + ' on ' + #temporals.format(m.lastReminderAt,'dd MMM yyyy HH:mm')}"></div>
+
+            <div th:if="${m.status.name() != 'RELEASED' and plan.status.name() != 'ON_HOLD'}" style="margin-top:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:7px;padding:9px;">
+                <strong style="font-size:10px;color:#475569;">Applicant compliance request</strong>
+                <form method="post" th:action="@{/milestone3/disbursement/milestone/{id}/request(id=${m.id})}" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="text" name="remarks" th:value="${m.complianceRequestRemarks != null ? m.complianceRequestRemarks : (m.sequenceNo == 1 ? 'Please upload the sanctioned letter for the first installment.' : 'Please upload the required utilization / compliance proof for this installment.') }" style="flex:1;min-width:280px;padding:7px;border:1px solid #CBD5E1;border-radius:5px;font-size:10px;">
+                    <button class="btn light" type="submit">📨 Request from Applicant</button>
+                </form>
+            </div>
+
+            <div th:if="${m.complianceOriginalFilename != null}" style="margin-top:10px;padding:9px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:7px;font-size:11px;">
+                <strong>Applicant submitted:</strong> <span th:text="${m.complianceOriginalFilename}">document.pdf</span>
+                <a class="btn light" target="_blank" th:href="@{/milestone3/milestone/{id}/document(id=${m.id})}" style="margin-left:8px;">👁 View Document</a>
+            </div>
+            <div class="actions" style="margin-top:12px;" th:if="${m.status.name() != 'RELEASED' and plan.status.name() != 'ON_HOLD'}">
+                <form class="inline-form" th:action="@{/milestone3/milestone/{id}/compliance(id=${m.id})}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="text" class="field" name="remarks" value="Compliance evidence reviewed and submitted for verification." style="width:310px;display:inline-block;">
+                    <button class="btn light" type="submit" th:disabled="${m.status.name() == 'COMPLIANCE_SUBMITTED' or m.status.name() == 'COMPLIANCE_VERIFIED'}">✓ Mark Compliance Submitted</button>
+                </form>
+
+                <form class="inline-form" th:if="${m.status.name() == 'COMPLIANCE_SUBMITTED'}" th:action="@{/milestone3/milestone/{id}/verify(id=${m.id})}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="approve" value="true">
+                    <input type="text" class="field" name="remarks" value="Compliance verified by Finance Officer." style="width:280px;display:inline-block;">
+                    <button class="btn green" type="submit">✓ Verify Compliance</button>
+                </form>
+
+                <form class="inline-form" th:if="${m.status.name() == 'COMPLIANCE_SUBMITTED'}" th:action="@{/milestone3/milestone/{id}/verify(id=${m.id})}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="approve" value="false">
+                    <input type="text" class="field" name="remarks" value="Compliance requires correction or additional evidence." style="width:310px;display:inline-block;">
+                    <button class="btn red" type="submit">↩ Return for Correction</button>
+                </form>
+
+                <form class="inline-form" th:if="${m.status.name() == 'COMPLIANCE_VERIFIED'}" th:action="@{/milestone3/milestone/{id}/release(id=${m.id})}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="text" class="field" name="remarks" placeholder="Release remark" style="width:190px;display:inline-block;">
+                    <button class="btn orange" type="submit">🏦 Release Now ₹<span th:text="${#numbers.formatDecimal(m.scheduledAmount,1,2)}">0</span></button>
+                </form>
+                <div class="small" th:if="${m.status.name() == 'COMPLIANCE_VERIFIED'}" style="width:100%;color:#166534;font-weight:700;"
+                     th:text="${'Verified. Release Now will generate the transaction ID after release. Otherwise automatic release will run at ' + #temporals.format(m.dueDate,'dd MMM yyyy') + ' ' + #temporals.format(m.dueTime,'hh:mm a')}">Automatic release time</div>
+            </div>
+        </div>
+    </section>
+</main>
+
+</body>
+</html>

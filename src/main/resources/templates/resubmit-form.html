@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resubmit Application</title>
+    <style>
+        *{box-sizing:border-box} body{margin:0;background:#f5f7fb;color:#0f172a;font-family:Arial,sans-serif}.page{max-width:1000px;margin:0 auto;padding:28px 22px 50px}h1{color:#12377b;margin:10px 0 6px}.back{color:#1d4ed8;text-decoration:none;font-weight:800;font-size:13px}.card{background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:22px;margin-top:18px;box-shadow:0 8px 24px rgba(15,23,42,.05)}.note{font-size:13px;color:#64748b}.remark{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:12px;margin-top:10px}.section-title{margin:25px 0 12px}.doc{border:1px solid #dbe3ef;border-radius:12px;padding:15px;margin:10px 0;background:#f8fafc}.doc-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.doc-name{font-weight:800}.status{font-size:12px;font-weight:800;padding:6px 9px;border-radius:999px}.verified{background:#dcfce7;color:#166534}.required{background:#ffedd5;color:#9a3412}.pending{background:#e0f2fe;color:#075985}.missing{background:#fee2e2;color:#991b1b}.help{font-size:12px;margin-top:8px;color:#64748b}.file{width:100%;margin-top:10px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.btn{border:0;border-radius:9px;padding:12px 18px;background:#15803d;color:#fff;font-weight:900;cursor:pointer;margin-top:16px}.summary{background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:14px;color:#9a3412;font-weight:700}
+    </style>
+</head>
+<body>
+<main class="page">
+    <a class="back" th:href="@{/dashboard/citizen}">← Back to Dashboard</a>
+    <h1>Resubmit Application</h1>
+    <p class="note">Application #<strong th:text="${application.id}">1</strong></p>
+
+    <section class="card">
+        <div class="summary" th:if="${resubmitRequiredKeys != null and !resubmitRequiredKeys.isEmpty()}">
+            The officer has requested replacement of <span th:text="${#sets.size(resubmitRequiredKeys)}">0</span> document(s). Upload only the documents marked <b>Resubmission Required</b>.
+        </div>
+        <p class="note" th:if="${resubmitRequiredKeys == null or resubmitRequiredKeys.isEmpty()}">No individual document is currently marked for replacement. You may upload a replacement only if requested in the officer remark.</p>
+        <div th:if="${applicationRemarks != null and !#lists.isEmpty(applicationRemarks)}">
+            <h3>Officer / System Remarks</h3>
+            <div class="remark" th:each="remark : ${applicationRemarks}" th:if="${remark.remarks != null and !#strings.isEmpty(remark.remarks)}">
+                <strong th:text="${remark.actorRole + ' · ' + remark.action}">Officer</strong>
+                <div th:text="${remark.remarks}">Remark</div>
+            </div>
+        </div>
+    </section>
+
+    <form class="card" th:action="@{/application/resubmit}" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="submittedAppId" th:value="${application.id}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+        <h2 class="section-title">Mandatory Documents</h2>
+        <div class="doc" th:each="entry : ${requiredDocuments}">
+            <div class="doc-head">
+                <span class="doc-name" th:text="${entry.value}">Document</span>
+                <span class="status required" th:if="${resubmitRequiredKeys != null and resubmitRequiredKeys.contains(entry.key)}">↻ Resubmission Required</span>
+                <span class="status verified" th:if="${documentStatusByKey != null and documentStatusByKey.get(entry.key) == 'VERIFIED'}">✓ Verified — No action required</span>
+                <span class="status pending" th:if="${documentStatusByKey != null and documentStatusByKey.get(entry.key) == 'PENDING'}">Pending Review</span>
+                <span class="status missing" th:if="${uploadedDocumentKeys == null or !uploadedDocumentKeys.contains(entry.key)}">Not Uploaded</span>
+            </div>
+            <div class="help" th:if="${resubmitRequiredKeys != null and resubmitRequiredKeys.contains(entry.key)}">The reviewing officer asked you to replace this document.</div>
+            <input class="file" type="file" th:name="${'document_' + entry.key}" accept=".pdf,.jpg,.jpeg,.png"
+                   th:if="${resubmitRequiredKeys != null and resubmitRequiredKeys.contains(entry.key)}" required>
+        </div>
+
+        <h2 class="section-title" th:if="${optionalDocuments != null and !optionalDocuments.isEmpty()}">Optional Documents</h2>
+        <div class="doc" th:each="entry : ${optionalDocuments}">
+            <div class="doc-head">
+                <span class="doc-name" th:text="${entry.value}">Document</span>
+                <span class="status required" th:if="${resubmitRequiredKeys != null and resubmitRequiredKeys.contains(entry.key)}">↻ Resubmission Required</span>
+                <span class="status verified" th:if="${documentStatusByKey != null and documentStatusByKey.get(entry.key) == 'VERIFIED'}">✓ Verified — No action required</span>
+                <span class="status pending" th:if="${documentStatusByKey != null and documentStatusByKey.get(entry.key) == 'PENDING'}">Pending Review</span>
+                <span class="status missing" th:if="${uploadedDocumentKeys == null or !uploadedDocumentKeys.contains(entry.key)}">Not Uploaded</span>
+            </div>
+            <div class="help" th:if="${resubmitRequiredKeys != null and resubmitRequiredKeys.contains(entry.key)}">The reviewing officer asked you to replace this document.</div>
+            <input class="file" type="file" th:name="${'document_' + entry.key}" accept=".pdf,.jpg,.jpeg,.png"
+                   th:if="${resubmitRequiredKeys != null and resubmitRequiredKeys.contains(entry.key)}" required>
+        </div>
+
+        <button class="btn" type="submit" th:if="${resubmitRequiredKeys != null and !resubmitRequiredKeys.isEmpty()}">Upload Requested Documents &amp; Resubmit</button>
+    </form>
+</main>
+</body>
+</html>

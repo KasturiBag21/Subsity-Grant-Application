@@ -1,5 +1,6 @@
 package com.platform.application;
 
+import com.platform.scheme.SchemeRepository;
 import com.platform.user.Beneficiary;
 import com.platform.user.BeneficiaryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,103 +10,63 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
+/**
+ * Legacy eligibility controller — kept for backward compatibility with any
+ * existing routes that reference /eligibility/officer/field etc.
+ * New role-specific workflow endpoints are in WebController.
+ */
 @Controller
 @RequestMapping("/eligibility")
 public class EligibilityController {
 
-    @Autowired
-    private EligibilityService eligibilityService;
+    @Autowired private EligibilityService eligibilityService;
+    @Autowired private BeneficiaryRepository beneficiaryRepository;
+    @Autowired private SubsidyApplicationRepository applicationRepository;
+    @Autowired private SchemeRepository schemeRepository;
 
-    @Autowired
-    private BeneficiaryRepository beneficiaryRepository;
-
-    @GetMapping("/check")
-    public String evaluateUserEligibility(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-        Optional<Beneficiary> beneficiaryOpt = beneficiaryRepository.findByUserEmail(userDetails.getUsername());
-        if (beneficiaryOpt.isEmpty()) {
-            model.addAttribute("error", "Beneficiary metrics record profile matching missing.");
-            return "eligibility-result";
-        }
-        Beneficiary beneficiary = beneficiaryOpt.get();
-        EligibilityResult evaluationReport = eligibilityService.checkEligibility(beneficiary);
-
-        model.addAttribute("report", evaluationReport);
-        model.addAttribute("beneficiary", beneficiary);
-        return "eligibility-result";
-    }
-
-    @PostMapping("/submit")
-    public String executeApplicationPipeline(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-        Optional<Beneficiary> beneficiaryOpt = beneficiaryRepository.findByUserEmail(userDetails.getUsername());
-        if (beneficiaryOpt.isEmpty()) {
-            return "redirect:/dashboard?error=profile_not_found";
-        }
-        Beneficiary beneficiary = beneficiaryOpt.get();
-        EligibilityResult report = eligibilityService.checkEligibility(beneficiary);
-
-        if (!report.isEligible()) {
-            return "redirect:/eligibility/check?rejected=true";
-        }
-
-        SubsidyApplication savedApp = eligibilityService.registerAndRouteApplication(beneficiary, report);
-        model.addAttribute("application", savedApp);
-        model.addAttribute("report", report);
-        return "application-success";
-    }
-
-    // Role Route 1: Field Officer Ground Verification Desk
+    // Legacy field officer route — redirects to new dashboard
     @GetMapping("/officer/field")
-    public String showFieldOfficerDesk(Model model) {
-        model.addAttribute("apps", eligibilityService.getApplicationsForStatus(ApplicationStatus.FIELD_VERIFICATION));
-        model.addAttribute("roleTitle", "Field Verification Officer");
-        model.addAttribute("currentQueue", "FIELD_VERIFICATION");
-        return "officer-desk";
+    public String showFieldOfficerDesk() {
+        return "redirect:/dashboard/officer";
     }
 
-    // Role Route 2: District Officer Review Core Portal
+    // Legacy district officer route
     @GetMapping("/officer/district")
-    public String showDistrictOfficerDesk(Model model) {
-        model.addAttribute("apps", eligibilityService.getApplicationsForStatus(ApplicationStatus.DISTRICT_REVIEW));
-        model.addAttribute("roleTitle", "District Appraisal Admin");
-        model.addAttribute("currentQueue", "DISTRICT_REVIEW");
-        return "officer-desk";
+    public String showDistrictOfficerDesk() {
+        return "redirect:/dashboard/officer";
     }
 
-    // Role Route 3: Finance Approver Treasury Release desk
+    // Legacy finance approver route
     @GetMapping("/officer/finance")
-    public String showFinanceOfficerDesk(Model model) {
-        model.addAttribute("apps", eligibilityService.getApplicationsForStatus(ApplicationStatus.FINANCE_PENDING));
-        model.addAttribute("roleTitle", "Finance Payout Approver");
-        model.addAttribute("currentQueue", "FINANCE_PENDING");
-        return "officer-desk";
+    public String showFinanceOfficerDesk() {
+        return "redirect:/dashboard/officer";
     }
 
-    // Role Route 4: Global System Administrator Monitor Matrix Dashboard
-    @GetMapping("/admin/monitor")
-    public String showSystemAdminMonitor(Model model) {
-        model.addAttribute("apps", eligibilityService.getAllApplicationsForAdmin());
-        return "admin-monitor";
-    }
+    // Admin monitor — moved to WebController#showAdminMonitor
+    // (GET /eligibility/admin/monitor) to avoid ambiguous mapping.
 
-    // Unified Workflow Processing Endpoint for Handling Decisions, Rejections, and Re-verifications
+    // Legacy unified action — now split into role-specific endpoints in WebController
+    // Kept here as fallback
     @PostMapping("/officer/action")
-    public String processGovernanceAction(@RequestParam Long appId,
-                                          @RequestParam String workflowAction,
-                                          @RequestParam(required = false) String remarks,
-                                          @RequestParam String originQueue) {
-        eligibilityService.processWorkflowDecision(appId, workflowAction, remarks);
-
-        // Dynamic redirection to cleanly drop back to your respective role desk workspace
-        if ("DISTRICT_REVIEW".equals(originQueue)) return "redirect:/eligibility/officer/district";
-        if ("FINANCE_PENDING".equals(originQueue)) return "redirect:/eligibility/officer/finance";
-        return "redirect:/eligibility/officer/field";
+    public String legacyProcessGovernanceAction(@RequestParam Long appId,
+                                                @RequestParam String workflowAction,
+                                                @RequestParam(required = false) String remarks,
+                                                @RequestParam(required = false) String originQueue) {
+        // Route to appropriate service method based on the origin queue
+        if ("DISTRICT_REVIEW".equals(originQueue)) {
+            eligibilityService.districtOfficerAction(appId, workflowAction, remarks);
+        } else if ("FINANCE_PENDING".equals(originQueue)) {
+            eligibilityService.financeApproverAction(appId, workflowAction, remarks, 0);
+        } else if ("FUND_DISBURSEMENT".equals(originQueue)) {
+            // Milestone 3 is now Finance-owned. Legacy pages must enter the
+            // staged control desk instead of bypassing the milestone workflow.
+            return "redirect:/milestone3/disbursement/" + appId;
+        } else {
+            eligibilityService.fieldOfficerAction(appId, workflowAction, remarks);
+        }
+        return "redirect:/dashboard/officer";
     }
 }

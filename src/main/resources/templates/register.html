@@ -60,7 +60,7 @@
 
         .form-field { display: flex; flex-direction: column; }
         .form-field label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #444; }
-        .form-field input, .form-field select { padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }
+        .phone-field{display:flex;align-items:stretch}.phone-prefix{display:flex;align-items:center;padding:0 11px;background:#f1f5f9;border:1px solid #ccc;border-right:0;border-radius:6px 0 0 6px;font-weight:800;color:#334155}.phone-field input{border-radius:0 6px 6px 0;min-width:0}.form-field input, .form-field select { padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }
         .form-field input:focus, .form-field select:focus { border-color: var(--sagar-saffron); }
         .validation-error { color: #dc3545; font-size: 11px; font-weight: bold; margin-top: 3px; }
 
@@ -137,20 +137,13 @@
                 </div>
                 <div class="form-field">
                     <label>Contact Mobile Number</label>
-                    <input type="text" th:field="*{contactNumber}" placeholder="10-digit mobile" required>
+                    <div class="phone-field"><span class="phone-prefix">+91</span><input type="tel" th:field="*{contactNumber}" placeholder="10-digit mobile" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" required></div>
                     <div class="validation-error" th:if="${#fields.hasErrors('contactNumber')}" th:errors="*{contactNumber}"></div>
                 </div>
                 <div class="form-field">
                     <label>Aadhaar Number / Government ID</label>
                     <input type="text" th:field="*{governmentId}" placeholder="e.g. ABCD12345E" required>
                     <div class="validation-error" th:if="${#fields.hasErrors('governmentId')}" th:errors="*{governmentId}"></div>
-                </div>
-                <div class="form-field">
-                    <label>Primary Desired Subsidy Scheme</label>
-                    <select th:field="*{schemeName}" required>
-                        <option value="">-- Choose Initial Program Track --</option>
-                        <option th:each="sch : ${schemes}" th:value="${sch.schemeName}" th:text="${sch.schemeName}"></option>
-                    </select>
                 </div>
                 <div class="form-field">
                     <label>Age Profile (Years)</label>
@@ -252,6 +245,7 @@
     </div>
 </div>
 
+
 </body>
 </html>
 
@@ -320,7 +314,7 @@
 
 <!--        .form-field { display: flex; flex-direction: column; }-->
 <!--        .form-field label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #444; }-->
-<!--        .form-field input, .form-field select { padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }-->
+<!--        .phone-field{display:flex;align-items:stretch}.phone-prefix{display:flex;align-items:center;padding:0 11px;background:#f1f5f9;border:1px solid #ccc;border-right:0;border-radius:6px 0 0 6px;font-weight:800;color:#334155}.phone-field input{border-radius:0 6px 6px 0;min-width:0}.form-field input, .form-field select { padding: 11px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }-->
 <!--        .form-field input:focus, .form-field select:focus { border-color: var(&#45;&#45;sagar-saffron); }-->
 <!--        .validation-error { color: #dc3545; font-size: 11px; font-weight: bold; margin-top: 3px; }-->
 

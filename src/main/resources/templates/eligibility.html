@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR - Eligibility & Schemes</title>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        body{font-family:'Segoe UI',system-ui,sans-serif;background:#F1F5F9;margin:0;color:#1E293B}.page{max-width:1100px;margin:35px auto;padding:0 20px 60px}.back{color:#000080;font-weight:700;text-decoration:none;font-size:13px}.hero{background:linear-gradient(135deg,#000080,#1b1baa);color:#fff;border-radius:14px;padding:30px;margin:20px 0}.hero h1{margin:0 0 8px}.hero p{margin:0;color:rgba(255,255,255,.78);line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}.card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #E2E8F0}.emoji{font-size:34px}.card h3{margin:10px 0 6px;color:#000080}.desc{font-size:13px;color:#64748B;line-height:1.55;min-height:62px}.meta{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tag{background:#F1F5F9;padding:5px 8px;border-radius:7px;font-size:11px;font-weight:700}.docs{font-size:12px;color:#475569;margin:10px 0}.btn{display:block;text-align:center;background:#000080;color:#fff;text-decoration:none;padding:12px;border-radius:8px;font-weight:700;margin-top:16px}
+    </style>
+</head>
+<body>
+<div class="universal-header"><a href="/dashboard" class="brand-block"><div class="brand-text"><h1>SAGAR<span>.</span></h1><p>Subsidy &amp; Grant Administration Portal</p></div></a></div>
+<div class="page">
+    <a class="back" href="/dashboard">← Back to Dashboard</a>
+    <div class="hero">
+        <h1>Eligibility &amp; Scheme Applications</h1>
+        <p>Select a scheme to see its exact eligibility criteria and document requirements. Mandatory and optional documents are configured separately for every scheme.</p>
+    </div>
+    <div class="grid">
+        <div class="card" th:each="scheme : ${schemes}">
+            <div class="emoji" th:text="${scheme.emoji}">📋</div>
+            <h3 th:text="${scheme.schemeName}">Scheme</h3>
+            <div class="desc" th:text="${scheme.description}">Description</div>
+            <div class="meta">
+                <span class="tag" th:text="${'Age ' + scheme.eligibleAgeMin + '–' + scheme.eligibleAgeMax}">Age</span>
+                <span class="tag" th:text="'Income ≤ ₹' + ${#numbers.formatInteger(scheme.maxIncomeThreshold,1,'COMMA')}">Income</span>
+            </div>
+            <div class="docs"><strong>Mandatory:</strong> <span th:text="${scheme.requiredDocuments}">Documents</span></div>
+            <div class="docs"><strong>Optional:</strong> <span th:text="${scheme.optionalDocuments}">Documents</span></div>
+            <a class="btn" th:href="@{/eligibility/{id}(id=${scheme.id})}">Check Eligibility &amp; Apply →</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

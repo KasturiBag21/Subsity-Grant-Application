@@ -1,10 +1,14 @@
 package com.platform.application;
 
 public enum ApplicationStatus {
-    SUBMITTED,           // Fresh applicant submission phase
-    FIELD_VERIFICATION,  // Assigned to Field Officer queue
-    DISTRICT_REVIEW,     // Awaiting District Admin risk appraisal
-    FINANCE_PENDING,     // Cleared for milestone payout treasury validation
-    APPROVED,            // Active subsidy tracking status
-    REJECTED             // Application drop state
+    SUBMITTED,
+    FIELD_VERIFICATION,
+    DISTRICT_REVIEW,
+    FINANCE_PENDING,
+    FUND_DISBURSEMENT,
+    APPROVED,
+    REJECTED,
+    COOLING_PERIOD,
+    RESUBMITTED,
+    APPLICANT_REVERIFICATION
 }

@@ -18,25 +18,93 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Permits all public static configurations and eligibility checking routes cleanly
-                        .requestMatchers("/", "/register", "/login", "/eligibility/**", "/api/**", "/css/**", "/js/**").permitAll()
+                        // Public routes
+                        .requestMatchers("/", "/register", "/login", "/error",
+                                "/css/**", "/images/**", "/uploads/**",
+                                "/scheme/**").permitAll()
+
+                        // Dashboard router
+                        .requestMatchers("/dashboard").authenticated()
+
+                        // Administrator console and master-data management
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // Existing admin-monitor page remains available to officers and Admin.
+                        // IMPORTANT: keep this matcher before /eligibility/** so ADMIN is not
+                        // blocked by the broader citizen matcher below.
+                        .requestMatchers("/eligibility/admin/monitor")
+                        .hasAnyRole("FIELD_OFFICER", "DISTRICT_OFFICER",
+                                "FINANCE_APPROVER", "DISBURSEMENT_OFFICER", "ADMIN")
+
+                        // Officer application read-only details MUST come before the
+                        // broader /application/** citizen matcher, otherwise officers
+                        // receive HTTP 403 when opening application details.
+                        .requestMatchers("/officer/application/**")
+                        .hasAnyRole("FIELD_OFFICER", "DISTRICT_OFFICER", "FINANCE_APPROVER",
+                                "DISBURSEMENT_OFFICER", "ADMIN")
+
+                        // Legacy officer eligibility routes are still used by the
+                        // compatibility officer desk and must not be caught by the
+                        // broader citizen /eligibility/** matcher.
+                        .requestMatchers("/eligibility/officer/**")
+                        .hasAnyRole("FIELD_OFFICER", "DISTRICT_OFFICER", "FINANCE_APPROVER",
+                                "DISBURSEMENT_OFFICER", "ADMIN")
+
+                        // Citizen routes
+                        .requestMatchers("/dashboard/citizen", "/eligibility/**",
+                                "/profile/**", "/application/**", "/citizen/milestone/**").hasRole("BENEFICIARY")
+
+                        // Field Officer routes
+                        .requestMatchers("/officer/field/**").hasRole("FIELD_OFFICER")
+
+                        // District Officer routes
+                        .requestMatchers("/officer/district/**",
+                                "/officer/district/eligibility/**").hasRole("DISTRICT_OFFICER")
+
+                        // Finance Officer routes
+                        .requestMatchers("/officer/finance/**").hasRole("FINANCE_APPROVER")
+
+                        // Legacy Disbursement Officer routes retained for old accounts.
+                        .requestMatchers("/officer/disbursal/**")
+                        .hasAnyRole("FINANCE_APPROVER", "DISBURSEMENT_OFFICER")
+
+                        // Shared officer dashboard
+                        .requestMatchers("/dashboard/officer")
+                        .hasAnyRole("FIELD_OFFICER", "DISTRICT_OFFICER",
+                                "FINANCE_APPROVER", "DISBURSEMENT_OFFICER")
+
+                        // Milestone 3: Finance Officer owns the staged disbursement workflow.
+                        // The legacy DISBURSEMENT_OFFICER role is retained only for compatibility.
+                        .requestMatchers("/milestone3/citizen/**").hasRole("BENEFICIARY")
+
+                        .requestMatchers("/milestone3/disbursement/**")
+                        .hasAnyRole("FINANCE_APPROVER", "DISBURSEMENT_OFFICER")
+
+                        // Finance-only compliance reminder trigger.
+                        .requestMatchers("/milestone3/reminders/run")
+                        .hasRole("FINANCE_APPROVER")
+
+                        // Analytics is read-only and can be viewed by all officers plus Admin.
+                        .requestMatchers("/milestone3/analytics")
+                        .hasAnyRole("FIELD_OFFICER", "DISTRICT_OFFICER",
+                                "FINANCE_APPROVER", "DISBURSEMENT_OFFICER", "ADMIN")
+
+                        // Everything else must be authenticated.
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
                         .defaultSuccessUrl("/dashboard", true)
-                        .failureUrl("/login?error=true")
                         .permitAll()
                 )
                 .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout=true")
+                        .logoutSuccessUrl("/login?logout")
                         .permitAll()
-                );
+                )
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/uploads/**"));
 
         return http.build();
     }

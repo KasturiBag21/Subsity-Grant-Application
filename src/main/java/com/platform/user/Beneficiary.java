@@ -30,6 +30,13 @@ public class Beneficiary {
     private String schemeName;
     private double income;
     private String occupation;
+    private String bankAccountHolderName;
+    private String bankAccountNumber;
+    private String bankIfscCode;
+    private String bankName;
+    private boolean bankDetailsRequested = false;
+    private boolean bankDetailsVerified = false;
+    private String bankVerificationStatus = "NOT_REQUESTED";
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -74,6 +81,21 @@ public class Beneficiary {
 
     public String getOccupation() { return occupation; }
     public void setOccupation(String occupation) { this.occupation = occupation; }
+
+    public String getBankAccountHolderName() { return bankAccountHolderName; }
+    public void setBankAccountHolderName(String v) { bankAccountHolderName=v; }
+    public String getBankAccountNumber() { return bankAccountNumber; }
+    public void setBankAccountNumber(String v) { bankAccountNumber=v; }
+    public String getBankIfscCode() { return bankIfscCode; }
+    public void setBankIfscCode(String v) { bankIfscCode=v; }
+    public String getBankName() { return bankName; }
+    public void setBankName(String v) { bankName=v; }
+    public boolean isBankDetailsRequested() { return bankDetailsRequested; }
+    public void setBankDetailsRequested(boolean v) { bankDetailsRequested=v; }
+    public boolean isBankDetailsVerified() { return bankDetailsVerified; }
+    public void setBankDetailsVerified(boolean v) { bankDetailsVerified=v; }
+    public String getBankVerificationStatus() { return bankVerificationStatus; }
+    public void setBankVerificationStatus(String v) { bankVerificationStatus=v; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

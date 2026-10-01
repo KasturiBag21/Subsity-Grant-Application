@@ -1,693 +1,299 @@
 <!DOCTYPE html>
-<!--
-  FIX: xmlns:sec namespace corrected from "http://thymeleaf.org" (broken) to
-       "http://www.thymeleaf.org/extras/spring-security" (correct).
-  Without this, the SpringSecurityDialect cannot parse sec:authorize attributes
-  and every queue section renders to every authenticated officer regardless of role.
--->
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAGAR - Administrative Officer Desk</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Officer Dashboard</title>
     <style>
-        *, *::before, *::after { box-sizing: border-box; }
+        *{box-sizing:border-box}
+        body{margin:0;background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);color:#172033;font-family:"Segoe UI",Arial,Helvetica,sans-serif}
+        .page{max-width:1500px;margin:0 auto;padding:34px 24px 70px}
+        h1{color:#0f2f78;font-size:30px;margin:0 0 22px}
+        .queue{background:#fff;border:1px solid #dbe3ef;border-radius:16px;margin:20px 0;padding:0;box-shadow:0 8px 28px rgba(15,23,42,.07);overflow:hidden}
+        .queue-head{padding:20px 22px;background:linear-gradient(135deg,#0f2f78,#174ea6);color:#fff;border-bottom:3px solid #ff9933}
+        .queue-head h2{margin:0;font-size:19px;color:#fff}
+        .queue-head p{font-size:12px;color:#dbeafe;margin:6px 0 0}
+        .table-wrap{overflow:auto}
+        .app-table{width:100%;border-collapse:collapse;min-width:1120px}
+        .app-table th,.app-table td{padding:14px 13px;border-bottom:1px solid #edf0f5;text-align:left;vertical-align:top;font-size:12px}
+        .app-table tbody tr:hover{background:#f8fbff}
+        .app-table th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+        .app-id{font-weight:900;color:#0f2f78}
+        .info{display:inline-block;color:#1d4ed8;text-decoration:none;font-weight:800;font-size:11px;margin-top:5px}
+        .info:hover{text-decoration:underline}
+        .score{font-weight:900;color:#166534;margin-top:7px}
+        .email{color:#64748b;font-size:11px;margin-bottom:3px}
+        .docs{display:flex;flex-direction:column;gap:12px;min-width:420px}
+        .doc-review{padding:12px;border:1px solid #dbe3ef;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+        .doc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+        .doc{font-size:11px;color:#1d4ed8;text-decoration:none;line-height:1.4;flex:1}
+        .doc-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:900;background:#f1f5f9;color:#475569}
+        .doc-actions{display:flex;gap:7px;margin-top:10px;align-items:center;flex-wrap:wrap}.doc-name{font-weight:800;color:#172033;font-size:11px;line-height:1.35}.doc-file{color:#64748b;font-size:10px;margin-top:3px;word-break:break-word}.view-doc{background:#2563eb;text-decoration:none;display:inline-flex;align-items:center}.view-doc:hover{text-decoration:none}.doc-status-line{font-size:10px;color:#64748b;margin-top:6px}.doc-status-line strong{color:#334155}
+        .resubmit{background:#d97706}
+        .doc-hint{font-size:10px;color:#64748b;margin-top:6px}
+        .doc:hover{text-decoration:underline}
+        .pending{margin-top:8px;padding:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;color:#9a3412;font-size:11px}
+        .action-form{min-width:330px}
+        .remarks-area,.sanction,.utr{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;font:inherit;font-size:11px;background:#fff}
+        .remarks-area:focus,.sanction:focus,.utr:focus{outline:2px solid #bfdbfe;border-color:#2563eb}
+        .btn-row{display:flex;flex-wrap:wrap;gap:7px}
+        .btn{border:0;border-radius:8px;padding:9px 11px;color:#fff;font-weight:800;font-size:10px;cursor:pointer;box-shadow:0 2px 5px rgba(15,23,42,.12);transition:transform .15s,box-shadow .15s}
+        .btn:hover{transform:translateY(-1px);box-shadow:0 4px 9px rgba(15,23,42,.16)}
+        .approve{background:#15803d}.send{background:#1d4ed8}.applicant{background:#b45309}.reject{background:#b91c1c}.hold{background:#64748b}
+        .flash{padding:12px 15px;border-radius:10px;margin:0 0 16px;font-size:12px;border:1px solid transparent}
+        .success{background:#ecfdf5;color:#166534;border-color:#bbf7d0}
+        .error{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+        .empty{text-align:center;color:#94a3b8;padding:30px}
+        @media(max-width:800px){.page{padding:22px 10px 50px}h1{font-size:24px}.queue-head{padding:16px}.app-table{min-width:1000px}}
+        .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+        .subtitle{color:#64748b;font-size:12px;margin-top:-14px}
+        .logout-form{margin:0}.logout-btn{border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:9px;padding:10px 16px;font-weight:800;cursor:pointer}
+        .logout-btn:hover{background:#fef2f2}.doc{display:block;padding:0;background:transparent;border:0;border-radius:0}
+        .doc::before{content:"📄 ";}.info{padding:6px 9px;background:#eff6ff;border-radius:7px}.info:hover{background:#dbeafe;text-decoration:none}
+        @media(max-width:800px){.topbar{align-items:flex-start}.logout-btn{padding:8px 12px}}
+        .portal-header{position:fixed;top:0;left:0;right:0;z-index:1000;background:#fff;border-bottom:3px solid #ff9933;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+        .portal-header-inner{max-width:1500px;margin:0 auto;padding:15px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+        .brand{font-size:24px;font-weight:900;color:#000080;line-height:1}.brand span{color:#e67e22}
+        .brand-sub{font-size:9px;color:#94a3b8;font-weight:800;letter-spacing:.05em;margin-top:6px;text-transform:uppercase}
+        .role-title{font-size:12px;font-weight:900;color:#0f2f78;margin-top:5px}
+        .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+        .header-link{display:inline-flex;align-items:center;gap:5px;padding:9px 12px;border:1px solid #dbe3ef;border-radius:8px;background:#fff;color:#000080;text-decoration:none;font-size:12px;font-weight:800}
+        .header-link:hover{background:#eff6ff;text-decoration:none}
+        .header-logout{padding:9px 13px;border:1px solid #fecaca;border-radius:8px;background:#fff;color:#b91c1c;font-weight:900;cursor:pointer}
+        @media(max-width:800px){.portal-header-inner{align-items:flex-start;flex-direction:column}.header-actions{justify-content:flex-start}}
 
-        body {
-            background: #F1F5F9;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: #1E293B;
-        }
+        html,body{max-width:100%;overflow-x:hidden}
+        .page{width:min(1500px,calc(100% - 28px));max-width:1500px;box-sizing:border-box}
+        .portal-header-inner{width:100%;box-sizing:border-box}
+        .table-wrap,.queue-table-wrap,.applications-wrap{max-width:100%;overflow-x:auto}
+        table{max-width:100%}
+        .actions{flex-wrap:wrap}
 
-        /* ── Header ── */
-        .site-header {
-            background: #fff;
-            padding: 14px 40px;
-            box-shadow: 0 1px 4px rgba(0,0,0,.10);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #E67E22;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .site-header .brand h1 {
-            margin: 0;
-            font-size: 22px;
-            color: #000080;
-            font-weight: 800;
-            letter-spacing: -.3px;
-        }
-        .site-header .brand h1 span { color: #E67E22; }
-        .site-header .brand p {
-            margin: 2px 0 0;
-            font-size: 10px;
-            color: #94A3B8;
-            text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: .5px;
-        }
-        .site-header .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .site-header .nav-right .user-tag {
-            font-size: 13px;
-            font-weight: 600;
-            color: #475569;
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 20px;
-            padding: 5px 14px;
-        }
-        .logout-btn {
-            cursor: pointer;
-            padding: 6px 18px;
-            background: transparent;
-            border: 1.5px solid #000080;
-            color: #000080;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 13px;
-            transition: background .15s, color .15s;
-        }
-        .logout-btn:hover { background: #000080; color: #fff; }
+        /* Exact SAGAR branding reused from login/register pages */
 
-        /* ── Main layout ── */
-        main {
-            max-width: 1160px;
-            margin: 36px auto;
-            padding: 0 20px;
-        }
+        .header-brand-block{display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+        .portal-header .brand-block{margin:0;text-decoration:none}
+        .portal-header .brand-logo-svg{width:58px;height:58px;flex:0 0 58px}
+        .portal-header .brand-text h1{font-size:30px}
+        .portal-header .brand-text p{margin-top:2px;white-space:nowrap}
+        body{padding-top:126px}
+        @media(max-width:900px){body{padding-top:205px}.portal-header .brand-text p{white-space:normal}}
 
-        /* ── Control banner ── */
-        .control-banner {
-            background: #fff;
-            padding: 22px 28px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.06);
-            margin-bottom: 28px;
-            border-left: 5px solid #000080;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .control-banner h2 {
-            margin: 0;
-            font-size: 20px;
-            color: #000080;
-            font-weight: 800;
-        }
-        .control-banner p {
-            margin: 4px 0 0;
-            font-size: 11px;
-            color: #94A3B8;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: .5px;
-        }
-        .role-badge {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 5px 14px;
-            border-radius: 20px;
-            background: #EEF2FF;
-            color: #3730A3;
-            border: 1px solid #C7D2FE;
-            white-space: nowrap;
-        }
+        /* Compact header: match Login/Register SAGAR branding */
+        .portal-header{height:118px;box-sizing:border-box}
+        .portal-header-inner{height:100%;padding:12px 42px;box-sizing:border-box}
+        .header-brand-block{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:360px}
+        .portal-header .brand-block{display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;margin:0!important;text-decoration:none!important}
+        .portal-header .brand-logo-svg{width:58px!important;height:58px!important;min-width:58px;display:block}
+        .portal-header .brand-text{display:block}
+        .portal-header .brand-text h1{margin:0!important;font-size:30px!important;line-height:1!important;color:#000080!important}
+        .portal-header .brand-text p{margin:5px 0 0!important;font-size:10px!important;line-height:1.2!important;letter-spacing:.13em!important;text-transform:uppercase!important;color:#536b96!important;font-weight:700!important;white-space:nowrap!important}
+        .portal-header .role-title{margin:5px 0 0 70px!important;font-size:11px!important;line-height:1.1}
+        .header-actions{align-self:center}
+        body{padding-top:118px!important}
 
-        /* ── Queue card ── */
-        .queue-card {
-            background: #fff;
-            padding: 28px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,.06);
-            margin-bottom: 28px;
-            border-top: 3px solid #000080;
-        }
-        .queue-card.field-card  { border-top-color: #0EA5E9; }
-        .queue-card.district-card { border-top-color: #8B5CF6; }
-        .queue-card.finance-card { border-top-color: #10B981; }
+        /* Anchor targets must not disappear behind the fixed header */
+        #pending,#history{scroll-margin-top:132px}
+        .section-anchor{scroll-margin-top:132px}
 
-        .queue-card h3 {
-            color: #000080;
-            margin: 0 0 4px;
-            font-size: 16px;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .queue-card .queue-desc {
-            color: #64748B;
-            font-size: 12.5px;
-            margin: 0 0 20px;
-            line-height: 1.5;
-        }
-
-        /* ── Table ── */
-        .app-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .app-table thead tr {
-            border-bottom: 2px solid #E2E8F0;
-        }
-        .app-table thead th {
-            padding: 10px 12px;
-            color: #64748B;
-            font-size: 11px;
-            text-transform: uppercase;
-            font-weight: 800;
-            letter-spacing: .5px;
-            text-align: left;
-        }
-        .app-table tbody tr {
-            border-bottom: 1px solid #F1F5F9;
-            transition: background .1s;
-        }
-        .app-table tbody tr:hover { background: #F8FAFC; }
-        .app-table tbody td { padding: 14px 12px; vertical-align: top; }
-
-        .app-id {
-            font-weight: 800;
-            color: #000080;
-            font-size: 15px;
-        }
-        .user-email { font-weight: 600; color: #1E293B; }
-        .score-label {
-            font-size: 11px;
-            color: #94A3B8;
-            margin-top: 2px;
-        }
-
-        /* expand / profile table */
-        details summary {
-            color: #000080;
-            font-weight: 700;
-            font-size: 11px;
-            cursor: pointer;
-            margin: 10px 0 6px;
-            outline: none;
-            user-select: none;
-        }
-        .profile-table {
-            width: 100%;
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 6px;
-            font-size: 12px;
-            border-collapse: collapse;
-            overflow: hidden;
-        }
-        .profile-table td { padding: 5px 8px; }
-        .profile-table tr { border-bottom: 1px solid #E2E8F0; }
-        .profile-table tr:last-child { border-bottom: none; }
-        .profile-table .label { color: #64748B; font-weight: 600; width: 38%; }
-
-        .doc-links { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-        .doc-link {
-            color: #000080;
-            font-weight: 700;
-            font-size: 11px;
-            text-decoration: none;
-        }
-        .doc-link:hover { text-decoration: underline; }
-
-        /* scheme badge */
-        .scheme-badge {
-            background: #EFF6FF;
-            color: #1D4ED8;
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 11px;
-            display: inline-block;
-        }
-
-        /* action buttons */
-        .action-form {
-            display: inline-flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .btn {
-            padding: 6px 14px;
-            font-size: 11px;
-            border-radius: 5px;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            transition: opacity .15s;
-        }
-        .btn:hover { opacity: .85; }
-        .btn-approve { background: #000080; color: #fff; }
-        .btn-reverify { background: transparent; border: 1.5px solid #000080; color: #000080; }
-        .btn-reject  { background: transparent; border: 1.5px solid #EF4444; color: #EF4444; }
-
-        .empty-state {
-            padding: 36px;
-            text-align: center;
-            color: #CBD5E1;
-            font-weight: 700;
-            font-size: 13px;
-            letter-spacing: .3px;
+        @media(max-width:1000px){
+            .portal-header{height:auto;min-height:150px}
+            .portal-header-inner{padding:10px 20px;align-items:flex-start}
+            .header-actions{align-self:flex-start}
+            body{padding-top:175px!important}
+            #pending,#history{scroll-margin-top:190px}
         }
     </style>
 </head>
+
 <body>
 
-<!-- ── Header ── -->
-<header class="site-header">
-    <div class="brand">
-        <h1>SAGAR <span>Portal</span></h1>
-        <p>Government of India &mdash; Central Subsidy Desk</p>
-    </div>
-    <div class="nav-right">
-        <span class="user-tag" th:text="'Logged in as: ' + ${user.email}">Officer</span>
-        <form th:action="@{/logout}" method="post" style="display:inline;">
-            <button type="submit" class="logout-btn">Logout</button>
-        </form>
+<header class="portal-header">
+    <div class="portal-header-inner">
+        <div class="header-brand-block">
+            <a href="/dashboard/officer" class="brand-block">
+                <!-- FIX: Embedded matching SAGAR Vector Emblem Layout -->
+                <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org">
+                    <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
+                    <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+                    <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <div class="brand-text">
+                    <h1>SAGAR<span>.</span></h1>
+                    <p>Subsidy &amp; Grant Administration</p>
+                </div>
+            </a>
+            <div class="role-title" sec:authorize="hasRole('FIELD_OFFICER')">Field Verification Officer</div>
+            <div class="role-title" sec:authorize="hasRole('DISTRICT_OFFICER')">District Review Officer</div>
+            <div class="role-title" sec:authorize="hasRole('FINANCE_APPROVER')">Finance Approver</div>
+            <div class="role-title" sec:authorize="hasRole('DISBURSEMENT_OFFICER')">Fund Disbursement Officer</div>
+        </div>
+
+        <div class="header-actions">
+            <a class="header-link" href="#pending">📋 Pending Applications</a>
+            <a class="header-link" href="#history">🕘 Completed History</a>
+
+            <a class="header-link" href="/milestone3/analytics"
+               sec:authorize="hasAnyRole('FINANCE_APPROVER','DISBURSEMENT_OFFICER')">
+                📊 Overall Analytics
+            </a>
+
+            <a class="header-link" href="/officer/applications/history/pdf">⬇ History PDF</a>
+            <a class="header-link" href="/officer/applications/history/excel">⬇ History Excel</a>
+
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="header-logout">↪ Logout</button>
+            </form>
+        </div>
     </div>
 </header>
 
-<main>
+<main class="page">
+    <div style="margin-bottom:18px">
+        <h1 sec:authorize="hasRole('FIELD_OFFICER')">Field Officer Dashboard</h1>
+        <h1 sec:authorize="hasRole('DISTRICT_OFFICER')">District Officer Dashboard</h1>
+        <h1 sec:authorize="hasRole('FINANCE_APPROVER')">Finance Officer Dashboard</h1>
+        <h1 sec:authorize="hasRole('DISBURSEMENT_OFFICER')">Disbursement Officer Dashboard</h1>
+        <div class="subtitle" style="margin-top:-14px" th:text="${user != null ? user.email : 'Officer'}">Officer</div>
+    </div>
+    <div class="flash success" th:if="${success}" th:text="${success}">Success</div>
+    <div class="flash error" th:if="${error}" th:text="${error}">Error</div>
 
-    <!-- ── Control Banner ── -->
-    <div class="control-banner">
-        <div>
-            <h2>Platform Management Control Desk</h2>
-            <p>Active Security Clearance Level</p>
+    <section id="pending" class="queue" sec:authorize="hasAnyRole('FIELD_OFFICER')">
+        <div class="queue-head">
+            <h2>🔎 Field Verification</h2>
+            <p>Verify documents and applicant information.</p>
         </div>
-        <span class="role-badge" sec:authentication="principal.authorities">Role</span>
-    </div>
+        <div class="table-wrap">
+            <table class="app-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Applicant</th>
+                    <th>Documents</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="app : ${fieldQueue}">
+                    <td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td>
+                    <td>
+                        <div class="email" th:text="${app.user.email}">email</div>
+                        <div th:text="${app.user.beneficiary != null ? app.user.beneficiary.fullName : 'N/A'}">Applicant</div>
+                        <div class="score" th:text="'Score: ' + ${app.eligibilityScore} + '/100'">Score</div>
+                    </td>
+                    <td>
+                        <div class="docs"><div class="doc-review" th:each="doc : ${app.documents}"><div class="doc-name" th:text="${doc.documentName}">Document</div><div class="doc-file" th:text="${doc.originalFilename}">filename.pdf</div><div class="doc-status-line">Status: <strong th:text="${doc.verificationStatus == null ? 'PENDING' : doc.verificationStatus}">PENDING</strong></div><div class="doc-actions"><a class="btn view-doc" th:href="${doc.url}" target="_blank" rel="noopener">👁 View</a><form th:action="@{/officer/field/document/{id}/{action}(id=${doc.id},action='VERIFY')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="Document verified by Field Officer."><button class="btn approve" type="submit">✓ Verify</button></form><form th:action="@{/officer/field/document/{id}/{action}(id=${doc.id},action='RESUBMIT')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="This document needs to be resubmitted by the applicant."><button class="btn resubmit" type="submit">↻ Needs Resubmission</button></form></div><div class="doc-hint" th:if="${doc.verificationStatus == 'RESUBMIT_REQUIRED'}">Applicant must replace this document.</div></div></div>
+                    </td>
+                    <td>
+                        <form class="action-form" th:action="@{/officer/field/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><textarea class="remarks-area" name="remarks" placeholder="Field verification remark"></textarea>
+                            <div class="btn-row"><button class="btn approve" type="submit">✓ Approve</button><button class="btn reject" type="submit" th:formaction="@{/officer/field/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button><button class="btn applicant" type="submit" th:formaction="@{/officer/field/action/{id}/{action}(id=${app.id},action='SEND_BACK_APPLICANT')}">📨 Send to Applicant</button></div>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(fieldQueue)}"><td colspan="4" class="empty">Field verification queue is empty.</td></tr></tbody></table></div></section>
 
-    <!-- ================================================================
-         QUEUE 1 · Field Operations Ground Verification
-         Visible to: ROLE_FIELD_OFFICER only
-         FIX: sec:authorize now works because SpringSecurityDialect is
-              registered in WebConfig.templateEngine() and the xmlns:sec
-              namespace URI is correct.
-    ================================================================ -->
-    <div class="queue-card field-card"
-         sec:authorize="hasAnyAuthority('FIELD_OFFICER', 'ROLE_FIELD_OFFICER')">
+    <section class="queue" sec:authorize="hasAnyRole('FIELD_OFFICER')" th:if="${!#lists.isEmpty(resubmittedQueue)}"><div class="queue-head"><h2>🔄 Applicant Resubmissions</h2><p>Applications returned by citizens for fresh field verification.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant</th><th>Score</th><th>Actions</th></tr></thead><tbody><tr th:each="app : ${resubmittedQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td><td th:text="${app.user.email}">email</td><td class="score" th:text="${app.eligibilityScore} + '/100'">0/100</td><td><form th:action="@{/officer/field/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><textarea class="remarks-area" name="remarks" placeholder="Verification remark"></textarea><button class="btn approve" type="submit">✓ Approve to District</button><button class="btn reject" type="submit" th:formaction="@{/officer/field/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button></form></td></tr></tbody></table></div></section>
 
-        <h3>📋 Field Operations Ground Verification Queue</h3>
-        <p class="queue-desc">
-            Inspect application parameters, verify uploaded documentation files, and execute workflow updates.
-        </p>
+    <section class="queue" sec:authorize="hasAnyRole('DISTRICT_OFFICER')"><div class="queue-head"><h2>🏛️ District Review</h2><p>Review field-verified applications and move them to Finance, Field, Applicant re-verification, or cooling period.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant / Score</th><th>Documents</th><th>Review</th><th>Actions</th></tr></thead><tbody>
+    <tr th:each="app : ${districtQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td><td><div class="email" th:text="${app.user.email}">email</div><div th:text="${app.user.beneficiary != null ? app.user.beneficiary.fullName : 'N/A'}">Applicant</div><div class="score" th:text="'Score: ' + ${app.eligibilityScore} + '/100'">Score</div></td><td><div class="docs"><div class="doc-review" th:each="doc : ${app.documents}"><div class="doc-name" th:text="${doc.documentName}">Document</div><div class="doc-file" th:text="${doc.originalFilename}">filename.pdf</div><div class="doc-status-line">Status: <strong th:text="${doc.verificationStatus == null ? 'PENDING' : doc.verificationStatus}">PENDING</strong></div><div class="doc-actions"><a class="btn view-doc" th:href="${doc.url}" target="_blank" rel="noopener">👁 View</a><form th:action="@{/officer/district/document/{id}/{action}(id=${doc.id},action='VERIFY')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="Document verified by District Officer."><button class="btn approve" type="submit">✓ Verify</button></form><form th:action="@{/officer/district/document/{id}/{action}(id=${doc.id},action='RESUBMIT')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="This document needs to be resubmitted by the applicant."><button class="btn resubmit" type="submit">↻ Needs Resubmission</button></form></div><div class="doc-hint" th:if="${doc.verificationStatus == 'RESUBMIT_REQUIRED'}">Applicant must replace this document.</div></div></div><div class="pending" th:if="${!app.missingOptionalDocuments.isEmpty()}"><strong>Optional pending:</strong> <span th:text="${#strings.listJoin(app.missingOptionalDocuments, ', ')}">—</span></div></td><td><a class="info" th:href="@{/officer/district/eligibility/{id}(id=${app.id})}">📊 Detailed Review</a></td><td><form class="action-form" th:action="@{/officer/district/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><textarea class="remarks-area" name="remarks" placeholder="District review remark"></textarea><div class="btn-row"><button class="btn approve" type="submit">✓ Approve</button><button class="btn send" type="submit" th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='SENDBACK')}">↩ Send to Field</button><button class="btn applicant" type="submit" th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='SEND_BACK_APPLICANT')}">📨 Send to Applicant</button><button class="btn reject" type="submit" th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button></div></form></td></tr>
+    <tr th:if="${#lists.isEmpty(districtQueue)}"><td colspan="5" class="empty">District review queue is empty.</td></tr></tbody></table></div></section>
 
-        <table class="app-table">
-            <thead>
-            <tr>
-                <th style="width:8%;">App ID</th>
-                <th style="width:47%;">Applicant Matrix &amp; Uploaded Documents</th>
-                <th style="width:20%;">Target Program</th>
-                <th style="width:25%; text-align:center;">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="app : ${fieldQueue}">
-                <td><span class="app-id" th:text="${app.id}"></span></td>
-                <td>
-                    <div class="user-email" th:text="${app.user != null ? app.user.email : 'N/A'}"></div>
-                    <div class="score-label" th:text="'Eligibility Score: ' + ${app.eligibilityScore} + ' / 100'"></div>
-                    <details>
-                        <summary>📄 View Application Profile</summary>
-                        <table class="profile-table">
-                            <tr><td class="label">Full Name</td><td th:text="${app.user?.beneficiary?.fullName ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Mobile Number</td><td th:text="${app.user?.beneficiary?.contactNumber ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Govt ID</td><td th:text="${app.user?.beneficiary?.governmentId ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Age</td><td th:text="${app.user?.beneficiary?.age != null ? app.user.beneficiary.age + ' yrs' : 'N/A'}"></td></tr>
-                            <tr><td class="label">Annual Income</td><td th:text="${app.user?.beneficiary?.income != null ? '₹' + app.user.beneficiary.income : 'N/A'}"></td></tr>
-                            <tr><td class="label">Occupation</td><td th:text="${app.user?.beneficiary?.occupation ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Gender</td><td th:text="${app.user?.beneficiary?.gender ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Disability Status</td><td th:text="${app.user?.beneficiary?.disabilityStatus ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Residence Type</td><td th:text="${app.user?.beneficiary?.residenceType ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">State</td><td th:text="${app.user?.beneficiary?.state ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Subsidy Scheme</td><td th:text="${app.user?.beneficiary?.schemeName ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Address</td><td th:text="${app.user?.beneficiary?.address ?: 'N/A'}"></td></tr>
-                        </table>
-                    </details>
-                    <div class="doc-links">
-                        <a th:if="${app.aadhaarFilename != null}" th:href="'/uploads/' + ${app.aadhaarFilename}" target="_blank" class="doc-link">🔍 View Aadhaar Identity Document</a>
-                        <a th:if="${app.bankPassbookFilename != null}" th:href="'/uploads/' + ${app.bankPassbookFilename}" target="_blank" class="doc-link">📂 View Bank Passbook Attachment</a>
-                    </div>
-                </td>
-                <td><span class="scheme-badge" th:text="${app.scheme?.schemeName ?: 'Central Program'}"></span></td>
-                <td style="text-align:center;">
-                    <form class="action-form" th:action="@{/officer/action}" method="post">
-                        <input type="hidden" name="appId" th:value="${app.id}"/>
-                        <button class="btn btn-approve" type="submit" name="workflowAction" value="APPROVE">Approve</button>
-                        <button class="btn btn-reverify" type="submit" name="workflowAction" value="REVERIFY">Reverify</button>
-                        <button class="btn btn-reject" type="submit" name="workflowAction" value="REJECT">Reject</button>
-                    </form>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(fieldQueue)}">
-                <td colspan="4" class="empty-state">📭 Field verification queue is empty.</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- ================================================================
-         QUEUE 2 · District Administration Risk Appraisal
-         Visible to: ROLE_DISTRICT_OFFICER only
-    ================================================================ -->
-    <div class="queue-card district-card"
-         sec:authorize="hasAnyAuthority('DISTRICT_OFFICER', 'ROLE_DISTRICT_OFFICER', 'DISTRICT_ADMIN', 'ROLE_DISTRICT_ADMIN')">
-
-        <h3>🏛️ District Administration Risk Appraisal Desk Queue</h3>
-        <p class="queue-desc">
-            Review field verification notes, crosscheck citizen data points, and execute dynamic validation routing operations.
-        </p>
-
-        <table class="app-table">
-            <thead>
-            <tr>
-                <th style="width:8%;">App ID</th>
-                <th style="width:47%;">Applicant Matrix &amp; Uploaded Documents</th>
-                <th style="width:20%;">Target Program</th>
-                <th style="width:25%; text-align:center;">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="app : ${districtQueue}">
-                <td><span class="app-id" th:text="${app.id}"></span></td>
-                <td>
-                    <div class="user-email" th:text="${app.user != null ? app.user.email : 'N/A'}"></div>
-                    <div class="score-label" th:text="'Eligibility Score: ' + ${app.eligibilityScore} + ' / 100'"></div>
-                    <details>
-                        <summary>📄 View Application Profile</summary>
-                        <table class="profile-table">
-                            <tr><td class="label">Full Name</td><td th:text="${app.user?.beneficiary?.fullName ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Mobile Number</td><td th:text="${app.user?.beneficiary?.contactNumber ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Govt ID</td><td th:text="${app.user?.beneficiary?.governmentId ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Age</td><td th:text="${app.user?.beneficiary?.age != null ? app.user.beneficiary.age + ' yrs' : 'N/A'}"></td></tr>
-                            <tr><td class="label">Annual Income</td><td th:text="${app.user?.beneficiary?.income != null ? '₹' + app.user.beneficiary.income : 'N/A'}"></td></tr>
-                            <tr><td class="label">Occupation</td><td th:text="${app.user?.beneficiary?.occupation ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Gender</td><td th:text="${app.user?.beneficiary?.gender ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Disability Status</td><td th:text="${app.user?.beneficiary?.disabilityStatus ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Residence Type</td><td th:text="${app.user?.beneficiary?.residenceType ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">State</td><td th:text="${app.user?.beneficiary?.state ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Subsidy Scheme</td><td th:text="${app.user?.beneficiary?.schemeName ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Address</td><td th:text="${app.user?.beneficiary?.address ?: 'N/A'}"></td></tr>
-                        </table>
-                    </details>
-                    <div class="doc-links">
-                        <a th:if="${app.aadhaarFilename != null}" th:href="'/uploads/' + ${app.aadhaarFilename}" target="_blank" class="doc-link">🔍 View Aadhaar Identity Document</a>
-                        <a th:if="${app.bankPassbookFilename != null}" th:href="'/uploads/' + ${app.bankPassbookFilename}" target="_blank" class="doc-link">📂 View Bank Passbook Attachment</a>
-                    </div>
-                </td>
-                <td><span class="scheme-badge" th:text="${app.scheme?.schemeName ?: 'Central Program'}"></span></td>
-                <td style="text-align:center;">
-                    <form class="action-form" th:action="@{/officer/action}" method="post">
-                        <input type="hidden" name="appId" th:value="${app.id}"/>
-                        <button class="btn btn-approve" type="submit" name="workflowAction" value="APPROVE">Approve</button>
-                        <button class="btn btn-reverify" type="submit" name="workflowAction" value="REVERIFY">Reverify</button>
-                        <button class="btn btn-reject" type="submit" name="workflowAction" value="REJECT">Reject</button>
-                    </form>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(districtQueue)}">
-                <td colspan="4" class="empty-state">📭 District appraisal queue is empty.</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- ================================================================
-         QUEUE 3 · Finance Approver Treasury Release
-         Visible to: ROLE_FINANCE_APPROVER only
-    ================================================================ -->
-    <div class="queue-card finance-card"
-         sec:authorize="hasAnyAuthority('FINANCE_APPROVER', 'ROLE_FINANCE_APPROVER')">
-
-        <h3>💰 Finance Approver Treasury Release Desk Queue</h3>
-        <p class="queue-desc">
-            Review audit parameters, crosscheck banking ledger documents, and authorize regional grant disbursements.
-        </p>
-
-        <table class="app-table">
-            <thead>
-            <tr>
-                <th style="width:8%;">App ID</th>
-                <th style="width:47%;">Applicant Matrix &amp; Uploaded Documents</th>
-                <th style="width:20%;">Target Program</th>
-                <th style="width:25%; text-align:center;">Actions</th>
-            </tr>
-            </thead>
+    <section class="queue" sec:authorize="hasAnyRole('FINANCE_APPROVER')">
+        <div class="queue-head"><h2>💰 Finance Approval</h2><p>Verify applicant contact, score and Bank Passbook before sanctioning funds.</p></div>
+        <div class="table-wrap"><table class="app-table">
+            <thead><tr><th>ID</th><th>Applicant Verification</th><th>Bank Passbook</th><th>Scheme / Score</th><th>Finance Decision</th></tr></thead>
             <tbody>
             <tr th:each="app : ${financeQueue}">
-                <td><span class="app-id" th:text="${app.id}"></span></td>
-                <td>
-                    <div class="user-email" th:text="${app.user != null ? app.user.email : 'N/A'}"></div>
-                    <div class="score-label" th:text="'Eligibility Score: ' + ${app.eligibilityScore} + ' / 100'"></div>
-                    <details>
-                        <summary>📄 View Application Profile</summary>
-                        <table class="profile-table">
-                            <tr><td class="label">Full Name</td><td th:text="${app.user?.beneficiary?.fullName ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Mobile Number</td><td th:text="${app.user?.beneficiary?.contactNumber ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Govt ID</td><td th:text="${app.user?.beneficiary?.governmentId ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Age</td><td th:text="${app.user?.beneficiary?.age != null ? app.user.beneficiary.age + ' yrs' : 'N/A'}"></td></tr>
-                            <tr><td class="label">Annual Income</td><td th:text="${app.user?.beneficiary?.income != null ? '₹' + app.user.beneficiary.income : 'N/A'}"></td></tr>
-                            <tr><td class="label">Occupation</td><td th:text="${app.user?.beneficiary?.occupation ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Gender</td><td th:text="${app.user?.beneficiary?.gender ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Disability Status</td><td th:text="${app.user?.beneficiary?.disabilityStatus ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Residence Type</td><td th:text="${app.user?.beneficiary?.residenceType ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">State</td><td th:text="${app.user?.beneficiary?.state ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Subsidy Scheme</td><td th:text="${app.user?.beneficiary?.schemeName ?: 'N/A'}"></td></tr>
-                            <tr><td class="label">Address</td><td th:text="${app.user?.beneficiary?.address ?: 'N/A'}"></td></tr>
-                        </table>
-                    </details>
-                    <div class="doc-links">
-                        <a th:if="${app.aadhaarFilename != null}" th:href="'/uploads/' + ${app.aadhaarFilename}" target="_blank" class="doc-link">🔍 View Aadhaar Identity Document</a>
-                        <a th:if="${app.bankPassbookFilename != null}" th:href="'/uploads/' + ${app.bankPassbookFilename}" target="_blank" class="doc-link">📂 View Bank Passbook Attachment</a>
-                    </div>
-                </td>
-                <td><span class="scheme-badge" th:text="${app.scheme?.schemeName ?: 'Central Program'}"></span></td>
-                <td style="text-align:center;">
-                    <form class="action-form" th:action="@{/officer/action}" method="post">
-                        <input type="hidden" name="appId" th:value="${app.id}"/>
-                        <button class="btn btn-approve" type="submit" name="workflowAction" value="APPROVE">Approve</button>
-                        <button class="btn btn-reverify" type="submit" name="workflowAction" value="REVERIFY">Reverify</button>
-                        <button class="btn btn-reject" type="submit" name="workflowAction" value="REJECT">Reject</button>
-                    </form>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(financeQueue)}">
-                <td colspan="4" class="empty-state">📭 Finance treasury queue is empty.</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+                <td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br>
+                    <a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a>
+                    <a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td>
+                <td><strong th:text="${app.user?.beneficiary?.fullName ?: app.user?.email}">Applicant</strong>
+                    <div class="email" th:text="${app.user?.email}">email</div>
+                    <div style="margin-top:7px"><strong>☎ Contact:</strong> <span th:text="${app.user?.beneficiary?.contactNumber ?: 'Not provided'}">Not provided</span></div>
+                    <div style="margin-top:6px;font-size:10px;color:#64748b">Call applicant to confirm identity and bank details.</div></td>
+                <td><div th:with="bankDoc=${app.documents.?[documentKey == 'bank_passbook']}" class="doc-review">
+                    <div class="doc-name">🏦 Bank Passbook &amp; Payment Account</div>
+                    <div th:if="${!bankDoc.isEmpty()}"><div class="doc-file" th:text="${bankDoc[0].originalFilename}">bank.pdf</div><a class="btn view-doc" target="_blank" th:href="${bankDoc[0].url}">👁 View Bank Passbook</a></div>
+                    <div th:if="${bankDoc.isEmpty()}" class="pending">Bank Passbook not uploaded.</div>
+                    <div style="margin-top:10px;font-size:11px" th:if="${app != null}">
+                        <div><strong>Status:</strong> <span th:text="${app.paymentBankVerificationStatus}">NOT_REQUESTED</span></div>
+                        <div th:if="${app.paymentAccountHolderName != null}"><strong>Holder:</strong> <span th:text="${app.paymentAccountHolderName}"></span></div>
+                        <div th:if="${app.paymentAccountNumber != null}"><strong>Account:</strong> <span th:text="${'XXXXXX' + #strings.substring(app.paymentAccountNumber,#strings.length(app.paymentAccountNumber)-4)}"></span></div>
+                        <div th:if="${app.paymentIfscCode != null}"><strong>IFSC:</strong> <span th:text="${app.paymentIfscCode}"></span></div>
+                        <div th:if="${app.paymentBankName != null}"><strong>Bank:</strong> <span th:text="${app.paymentBankName}"></span></div></div>
+                    <form th:if="${app.paymentBankVerificationStatus == null or app.paymentBankVerificationStatus == 'NOT_REQUESTED' or app.paymentBankVerificationStatus == 'REQUESTED'}" th:action="@{/officer/finance/{id}/request-bank-details(id=${app.id})}" method="post" style="margin-top:8px">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><button class="btn applicant" type="submit">📨 Request Bank Details</button></form>
+                    <div th:if="${app.paymentBankVerificationStatus == 'SUBMITTED'}" class="btn-row" style="margin-top:8px">
+                        <form th:action="@{/officer/finance/{id}/verify-bank-details(id=${app.id})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="approve" value="true"><button class="btn approve" type="submit">✓ Verify Account</button></form>
+                        <form th:action="@{/officer/finance/{id}/verify-bank-details(id=${app.id})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="approve" value="false"><button class="btn reject" type="submit">↩ Request Correction</button></form></div>
+                </div></td>
+                <td><strong th:text="${app.scheme.schemeName}">Scheme</strong><br>
+                    Remaining: ₹<span th:text="${#numbers.formatDecimal(app.scheme.remainingBudget,1,2)}">0</span>
+                    <div class="score" th:text="'Eligibility Score: ' + ${app.eligibilityScore} + '/100'">Eligibility Score: 0/100</div></td>
+                <td><form class="action-form" th:action="@{/officer/finance/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <label style="display:block;font-size:10px;font-weight:800;margin-bottom:5px">Sanctioned Amount (₹)</label>
+                    <input class="sanction" type="number" name="sanctionAmount" min="0.01" step="0.01" th:attr="max=${app.scheme.remainingBudget}" th:value="${app.sanctionAmount > 0 ? app.sanctionAmount : ''}" placeholder="Enter sanctioned amount" required>
+                    <textarea class="remarks-area" name="remarks" placeholder="Finance verification / sanction remark"></textarea>
+                    <div class="btn-row"><button class="btn approve" type="submit">✓ Verify &amp; Sanction</button>
+                        <button class="btn send" type="submit" formnovalidate th:formaction="@{/officer/finance/action/{id}/{action}(id=${app.id},action='SENDBACK')}">↩ Send to District</button>
+                        <button class="btn applicant" type="submit" formnovalidate th:formaction="@{/officer/finance/action/{id}/{action}(id=${app.id},action='SEND_BACK_APPLICANT')}">📨 Send to Applicant</button>
+                        <button class="btn reject" type="submit" formnovalidate th:formaction="@{/officer/finance/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button></div>
+                </form></td></tr>
+            <tr th:if="${#lists.isEmpty(financeQueue)}"><td colspan="5" class="empty">Finance queue is empty.</td></tr>
+            </tbody></table></div></section>
 
+    <section class="queue" sec:authorize="hasAnyRole('FINANCE_APPROVER')"><div class="queue-head"><h2>🏦 Finance — Staged Fund Disbursement</h2><p>Configure staged releases, verify compliance, and record milestone-wise fund releases.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant</th><th>Sanction</th><th>Actions</th></tr></thead><tbody><tr th:each="app : ${disbursalQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a><br><a class="info" th:href="@{/milestone3/disbursement/{id}(id=${app.id})}">📅 Open Staged Disbursement &amp; Compliance</a><br><a class="info" th:href="@{/milestone3/analytics(applicationId=${app.id})}">📊 Scheme Fund Analytics</a></td><td th:text="${app.user.email}">email</td><td th:text="'₹' + ${#numbers.formatDecimal(app.sanctionAmount,1,2)}">₹0</td><td>
+        <div class="action-form">
+            <a class="btn approve" style="display:inline-block;text-decoration:none;text-align:center;margin-bottom:8px;" th:href="@{/milestone3/disbursement/{id}(id=${app.id})}">🏦 Open Finance Disbursement Control</a>
+            <div style="font-size:10px;color:#64748b;line-height:1.5;">Staged release and compliance verification are completed from Finance control. The transaction ID is generated automatically only after a successful fund release.</div>
+            <div class="btn-row" style="margin-top:8px;">
+                <form method="post" th:action="@{/milestone3/disbursement/{id}/hold(id=${app.id})}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="remarks" value="Disbursement workflow placed on hold pending Finance review.">
+                    <button class="btn hold" type="submit">⏸ Hold</button>
+                </form>
+
+                <form method="post" th:action="@{/officer/disbursal/action/{id}/{action}(id=${app.id},action='SEND_FOR_APPROVAL')}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="btn send" type="submit">⬆ Send to Approver</button>
+                </form>
+                <form method="post" th:action="@{/officer/disbursal/action/{id}/{action}(id=${app.id},action='REJECT')}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="btn reject" type="submit">✗ Reject Application</button>
+                </form>
+            </div>
+        </div>
+    </td></tr><tr th:if="${#lists.isEmpty(disbursalQueue)}"><td colspan="4" class="empty">Finance staged-disbursement queue is empty.</td></tr></tbody></table></div></section>
+
+    <section id="history" class="queue">
+        <div class="queue-head"><h2>🕘 Completed Applications History</h2><p>Completed applications are retained here for review and reporting.</p></div>
+        <div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant</th><th>Status</th><th>Score</th><th>Amount</th><th>Actions</th></tr></thead><tbody>
+        <tr th:each="app : ${completedHistory}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span></td><td><div th:text="${app.user.beneficiary != null ? app.user.beneficiary.fullName : app.user.email}">Applicant</div><div class="email" th:text="${app.user.email}">email</div></td><td th:text="${app.applicationStatus}">APPROVED</td><td class="score" th:text="${app.eligibilityScore} + '/100'">0/100</td><td th:text="'₹' + ${#numbers.formatDecimal(app.sanctionAmount,1,2)}">₹0</td><td><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td></tr>
+        <tr th:if="${#lists.isEmpty(completedHistory)}"><td colspan="6" class="empty">No completed applications yet.</td></tr></tbody></table></div>
+    </section>
 </main>
-</body>
-</html>
 
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://thymeleaf.org" xmlns:sec="http://thymeleaf.org">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--    <title>SAGAR - Administrative Officer Desk</title>-->
-<!--</head>-->
-<!--<body style="background: #F8FAFC; margin: 0; padding: 0; font-family: sans-serif;">-->
-
-<!--&lt;!&ndash; Navigation Top Bar Header Component Layout &ndash;&gt;-->
-<!--<header style="background: #ffffff; padding: 15px 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #E67E22;">-->
-<!--    <div>-->
-<!--        <h1 style="margin: 0; font-size: 24px; color: #000080; font-weight: 800;">SAGAR <span style="color: #E67E22;">Portal</span></h1>-->
-<!--        <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Government of India Central Subsidy Desk</p>-->
-<!--    </div>-->
-<!--    <div style="display: flex; align-items: center; gap: 15px;">-->
-<!--        <span style="font-size: 13px; font-weight: 600; color: #475569;" th:text="'Logged in as: ' + ${user.email}">User</span>-->
-<!--        <form th:action="@{/logout}" method="post" style="display: inline;">-->
-<!--            <button type="submit" style="cursor: pointer; padding: 6px 15px; background: transparent; border: 1px solid #000080; color: #000080; border-radius: 4px; font-weight: 700;">Logout</button>-->
-<!--        </form>-->
-<!--    </div>-->
-<!--</header>-->
-
-<!--<main style="margin: 40px auto; max-width: 1200px; padding: 0 20px;">-->
-
-<!--    &lt;!&ndash; Platform Control Banner Card Panel &ndash;&gt;-->
-<!--    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px; border-left: 4px solid #000080;">-->
-<!--        <h2 style="margin: 0; font-size: 22px; color: #000080;">Platform Management Control Desk</h2>-->
-<!--        <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748B; font-weight: 700; text-transform: uppercase;">Active Security Clearance Level: <span style="color: #E67E22;" sec:authentication="principal.authorities"></span></p>-->
-<!--    </div>-->
-<!--    &lt;!&ndash; ========================================================================= &ndash;&gt;-->
-<!--    &lt;!&ndash; LAYER 1: FIELD OPERATIONS DESK WORKSPACE                                  &ndash;&gt;-->
-<!--    &lt;!&ndash; ========================================================================= &ndash;&gt;-->
-<!--    <div sec:authorize="hasAnyAuthority('FIELD_OFFICER', 'ROLE_FIELD_OFFICER')" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px;">-->
-<!--        <h3 style="color: #000080; margin-top: 0; display: flex; align-items: center; gap: 8px;">📋 Field Operations Ground Verification Queue</h3>-->
-<!--        <p style="color: #64748B; font-size: 13px; margin-top: -5px; margin-bottom: 20px;">Inspect application parameters, verify digital uploaded documentation files, and execute workflow updates.</p>-->
-
-<!--        <table style="width: 100%; border-collapse: collapse; text-align: left;">-->
-<!--            <thead>-->
-<!--            <tr style="border-bottom: 2px solid #E2E8F0; color: #000080; font-size: 13px; text-transform: uppercase; font-weight: 800;">-->
-<!--                <th style="padding: 10px; width: 10%;">App ID</th>-->
-<!--                <th style="padding: 10px; width: 45%;">Applicant Matrix &amp; Uploaded Documents</th>-->
-<!--                <th style="padding: 10px; width: 20%;">Target Program</th>-->
-<!--                <th style="padding: 10px; width: 25%; text-align: center;">Actions</th>-->
-<!--            </tr>-->
-<!--            </thead>-->
-<!--            <tbody>-->
-<!--            <tr th:each="app : ${fieldQueue}" style="border-bottom: 1px solid #EDF2F7; font-size: 13px;">-->
-<!--                <td style="padding: 15px; font-weight: 700; color: #000080; vertical-align: top;" th:text="${app.id}"></td>-->
-<!--                <td style="padding: 15px; line-height: 1.6;">-->
-<!--                    <div>User Account: <span th:text="${app.user != null ? app.user.email : 'N/A'}" style="font-weight: 600;"></span></div>-->
-<!--                    <div style="font-size: 11px; color: #64748B;" th:text="'Calculated Score: ' + ${app.eligibilityScore} + '/100'"></div>-->
-
-<!--                    <details style="margin-top: 8px; cursor: pointer;">-->
-<!--                        <summary style="color: #000080; font-weight: 700; font-size: 11px; outline: none; margin-bottom: 5px;">📄 View Application Profile Information</summary>-->
-<!--                        <table style="width: 100%; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 10px; font-size: 12px; margin-top: 5px; border-collapse: collapse;">-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Govt ID:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.governmentId : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Age:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.age + ' Years' : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Annual Income:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? '₹' + app.user.beneficiary.income : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Occupation:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.occupation : 'N/A'}"></td></tr>-->
-<!--                            <tr><td style="padding: 4px; color:#475569;"><strong>Address:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.address : 'N/A'}"></td></tr>-->
-<!--                        </table>-->
-<!--                    </details>-->
-<!--                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">-->
-<!--                        <a th:if="${app.aadhaarFilename != null}" th:href="'/uploads/' + ${app.aadhaarFilename}" target="_blank" style="color: #000080; font-weight: 700; font-size: 11px; text-decoration: underline;">🔍 View Aadhaar Identity Document</a>-->
-<!--                        <a th:if="${app.bankPassbookFilename != null}" th:href="'/uploads/' + ${app.bankPassbookFilename}" target="_blank" style="color: #000080; font-weight: 700; font-size: 11px; text-decoration: underline;">📂 View Bank Passbook Attachment</a>-->
-<!--                    </div>-->
-<!--                </td>-->
-<!--                <td style="padding: 15px; vertical-align: top;"><span style="background: #E0F2FE; color: #0369A1; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;" th:text="${app.scheme != null ? app.scheme.schemeName : 'Central Program'}"></span></td>-->
-<!--                <td style="padding: 15px; text-align: center; vertical-align: top;">-->
-<!--                    <form th:action="@{/officer/action}" method="post" style="display: inline-flex; gap: 6px; width: 100%;">-->
-<!--                        <input type="hidden" name="appId" th:value="${app.id}"/>-->
-<!--                        <button type="submit" name="workflowAction" value="APPROVE" style="padding: 6px 14px; font-size: 11px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; background: #000080; color: white;">Approve</button>-->
-<!--                        <button type="submit" name="workflowAction" value="REVERIFY" style="padding: 5px 12px; font-size: 11px; border: 1px solid #000080; color: #000080; background: transparent; border-radius: 4px; font-weight: 700; cursor: pointer;">Reverify</button>-->
-<!--                        <button type="submit" name="workflowAction" value="REJECT" style="padding: 5px 12px; font-size: 11px; border: 1px solid #EF4444; color: #EF4444; background: transparent; border-radius: 4px; font-weight: 700; cursor: pointer;">Reject</button>-->
-<!--                    </form>-->
-<!--                </td>-->
-<!--            </tr>-->
-<!--            <tr th:if="${#lists.isEmpty(fieldQueue)}">-->
-<!--                <td colspan="4" style="padding: 30px; text-align: center; color: #94A3B8; font-weight: bold;">📭 Field verification control workspace queue is completely empty.</td>-->
-<!--            </tr>-->
-<!--            </tbody>-->
-<!--        </table>-->
-<!--    </div>-->
-<!--    &lt;!&ndash; ========================================================================= &ndash;&gt;-->
-<!--    &lt;!&ndash; LAYER 2: DISTRICT APPRAISAL WORKSPACE                                     &ndash;&gt;-->
-<!--    &lt;!&ndash; ========================================================================= &ndash;&gt;-->
-<!--    <div sec:authorize="hasAnyAuthority('DISTRICT_OFFICER', 'ROLE_DISTRICT_OFFICER', 'DISTRICT_ADMIN', 'ROLE_DISTRICT_ADMIN')" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px;">-->
-<!--        <h3 style="color: #000080; margin-top: 0;">🏛️ District Administration Risk Appraisal Desk Queue</h3>-->
-<!--        <p style="color: #64748B; font-size: 13px; margin-top: -5px; margin-bottom: 20px;">Review field verification notes, crosscheck citizen data points, and execute dynamic validation routing operations.</p>-->
-
-<!--        <table style="width: 100%; border-collapse: collapse; text-align: left;">-->
-<!--            <thead>-->
-<!--            <tr style="border-bottom: 2px solid #E2E8F0; color: #000080; font-size: 13px; text-transform: uppercase; font-weight: 800;">-->
-<!--                <th style="padding: 10px; width: 10%;">App ID</th>-->
-<!--                <th style="padding: 10px; width: 45%;">Applicant Matrix &amp; Uploaded Documents</th>-->
-<!--                <th style="padding: 10px; width: 20%;">Target Program</th>-->
-<!--                <th style="padding: 10px; width: 25%; text-align: center;">Actions</th>-->
-<!--            </tr>-->
-<!--            </thead>-->
-<!--            <tbody>-->
-<!--            <tr th:each="app : ${districtQueue}" style="border-bottom: 1px solid #EDF2F7; font-size: 13px;">-->
-<!--                <td style="padding: 15px; font-weight: 700; color: #000080; vertical-align: top;" th:text="${app.id}"></td>-->
-<!--                <td style="padding: 15px; line-height: 1.6;">-->
-<!--                    <div>User Account: <span th:text="${app.user != null ? app.user.email : 'N/A'}" style="font-weight: 600;"></span></div>-->
-<!--                    <div style="font-size: 11px; color: #64748B;" th:text="'Calculated Score: ' + ${app.eligibilityScore} + '/100'"></div>-->
-
-<!--                    <details style="margin-top: 8px; cursor: pointer;">-->
-<!--                        <summary style="color: #000080; font-weight: 700; font-size: 11px; outline: none; margin-bottom: 5px;">📄 View Application Profile Information</summary>-->
-<!--                        <table style="width: 100%; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 10px; font-size: 12px; margin-top: 5px; border-collapse: collapse;">-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Govt ID:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.governmentId : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Age:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.age + ' Years' : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Annual Income:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? '₹' + app.user.beneficiary.income : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Occupation:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.occupation : 'N/A'}"></td></tr>-->
-<!--                            <tr><td style="padding: 4px; color:#475569;"><strong>Address:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.address : 'N/A'}"></td></tr>-->
-<!--                        </table>-->
-<!--                    </details>-->
-<!--                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">-->
-<!--                        <a th:if="${app.aadhaarFilename != null}" th:href="'/uploads/' + ${app.aadhaarFilename}" target="_blank" style="color: #000080; font-weight: 700; font-size: 11px; text-decoration: underline;">🔍 View Aadhaar Identity Document</a>-->
-<!--                        <a th:if="${app.bankPassbookFilename != null}" th:href="'/uploads/' + ${app.bankPassbookFilename}" target="_blank" style="color: #000080; font-weight: 700; font-size: 11px; text-decoration: underline;">📂 View Bank Passbook Attachment</a>-->
-<!--                    </div>-->
-<!--                </td>-->
-<!--                <td style="padding: 15px; vertical-align: top;"><span style="background: #E0F2FE; color: #0369A1; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;" th:text="${app.scheme != null ? app.scheme.schemeName : 'Central Program'}"></span></td>-->
-<!--                <td style="padding: 15px; text-align: center; vertical-align: top;">-->
-<!--                    <form th:action="@{/officer/action}" method="post" style="display: inline-flex; gap: 6px; width: 100%;">-->
-<!--                        <input type="hidden" name="appId" th:value="${app.id}"/>-->
-<!--                        <button type="submit" name="workflowAction" value="APPROVE" style="padding: 6px 14px; font-size: 11px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; background: #000080; color: white;">Approve</button>-->
-<!--                        <button type="submit" name="workflowAction" value="REVERIFY" style="padding: 5px 12px; font-size: 11px; border: 1px solid #000080; color: #000080; background: transparent; border-radius: 4px; font-weight: 700; cursor: pointer;">Reverify</button>-->
-<!--                        <button type="submit" name="workflowAction" value="REJECT" style="padding: 5px 12px; font-size: 11px; border: 1px solid #EF4444; color: #EF4444; background: transparent; border-radius: 4px; font-weight: 700; cursor: pointer;">Reject</button>-->
-<!--                    </form>-->
-<!--                </td>-->
-<!--            </tr>-->
-<!--            <tr th:if="${#lists.isEmpty(districtQueue)}">-->
-<!--                <td colspan="4" style="padding: 20px; text-align: center; color: #94A3B8;">📭 District Appraisal Desk Queue is completely clear.</td>-->
-<!--            </tr>-->
-<!--            </tbody>-->
-<!--        </table>-->
-<!--    </div>-->
-<!--    &lt;!&ndash; ========================================================================= &ndash;&gt;-->
-<!--    &lt;!&ndash; LAYER 3: FINANCE TREASURY RELEASE DESK WORKSPACE                          &ndash;&gt;-->
-<!--    &lt;!&ndash; ========================================================================= &ndash;&gt;-->
-<!--    <div sec:authorize="hasAnyAuthority('FINANCE_APPROVER', 'ROLE_FINANCE_APPROVER')" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px;">-->
-<!--        <h3 style="color: #000080; margin-top: 0;">💰 Finance Approver Treasury Release desk Queue</h3>-->
-<!--        <p style="color: #64748B; font-size: 13px; margin-top: -5px; margin-bottom: 20px;">Review core audit parameters, crosscheck banking ledger documents, and authorize dynamically calculated regional grant disbursements.</p>-->
-
-<!--        <table style="width: 100%; border-collapse: collapse; text-align: left;">-->
-<!--            <thead>-->
-<!--            <tr style="border-bottom: 2px solid #E2E8F0; color: #000080; font-size: 13px; text-transform: uppercase; font-weight: 800;">-->
-<!--                <th style="padding: 10px; width: 10%;">App ID</th>-->
-<!--                <th style="padding: 10px; width: 45%;">Applicant Matrix &amp; Uploaded Documents</th>-->
-<!--                <th style="padding: 10px; width: 20%;">Target Program</th>-->
-<!--                <th style="padding: 10px; width: 25%; text-align: center;">Actions</th>-->
-<!--            </tr>-->
-<!--            </thead>-->
-<!--            <tbody>-->
-<!--            <tr th:each="app : ${financeQueue}" style="border-bottom: 1px solid #EDF2F7; font-size: 13px;">-->
-<!--                <td style="padding: 15px; font-weight: 700; color: #000080; vertical-align: top;" th:text="${app.id}"></td>-->
-<!--                <td style="padding: 15px; line-height: 1.6;">-->
-<!--                    <div>User Account: <span th:text="${app.user != null ? app.user.email : 'N/A'}" style="font-weight: 600;"></span></div>-->
-<!--                    <div style="font-size: 11px; color: #64748B;" th:text="'Calculated Score: ' + ${app.eligibilityScore} + '/100'"></div>-->
-
-<!--                    <details style="margin-top: 8px; cursor: pointer;">-->
-<!--                        <summary style="color: #000080; font-weight: 700; font-size: 11px; outline: none; margin-bottom: 5px;">📄 View Application Profile Information</summary>-->
-<!--                        <table style="width: 100%; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 10px; font-size: 12px; margin-top: 5px; border-collapse: collapse;">-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Govt ID:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.governmentId : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Age:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.age + ' Years' : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Annual Income:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? '₹' + app.user.beneficiary.income : 'N/A'}"></td></tr>-->
-<!--                            <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 4px; color:#475569;"><strong>Occupation:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.occupation : 'N/A'}"></td></tr>-->
-<!--                            <tr><td style="padding: 4px; color:#475569;"><strong>Address:</strong></td><td style="padding: 4px;" th:text="${app.user != null and app.user.beneficiary != null ? app.user.beneficiary.address : 'N/A'}"></td></tr>-->
-<!--                        </table>-->
-<!--                    </details>-->
-<!--                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">-->
-<!--                        <a th:if="${app.aadhaarFilename != null}" th:href="'/uploads/' + ${app.aadhaarFilename}" target="_blank" style="color: #000080; font-weight: 700; font-size: 11px; text-decoration: underline;">🔍 View Aadhaar Identity Document</a>-->
-<!--                        <a th:if="${app.bankPassbookFilename != null}" th:href="'/uploads/' + ${app.bankPassbookFilename}" target="_blank" style="color: #000080; font-weight: 700; font-size: 11px; text-decoration: underline;">📂 View Bank Passbook Attachment</a>-->
-<!--                    </div>-->
-<!--                </td>-->
-<!--                <td style="padding: 15px; vertical-align: top;"><span style="background: #E0F2FE; color: #0369A1; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;" th:text="${app.scheme != null ? app.scheme.schemeName : 'Central Program'}"></span></td>-->
-<!--                <td style="padding: 15px; text-align: center; vertical-align: top;">-->
-<!--                    <form th:action="@{/officer/action}" method="post" style="display: inline-flex; gap: 6px; width: 100%;">-->
-<!--                        <input type="hidden" name="appId" th:value="${app.id}"/>-->
-<!--                        <button type="submit" name="workflowAction" value="APPROVE" style="padding: 6px 14px; font-size: 11px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; background: #000080; color: white;">Approve</button>-->
-<!--                        <button type="submit" name="workflowAction" value="REVERIFY" style="padding: 5px 12px; font-size: 11px; border: 1px solid #000080; color: #000080; background: transparent; border-radius: 4px; font-weight: 700; cursor: pointer;">Reverify</button>-->
-<!--                        <button type="submit" name="workflowAction" value="REJECT" style="padding: 5px 12px; font-size: 11px; border: 1px solid #EF4444; color: #EF4444; background: transparent; border-radius: 4px; font-weight: 700; cursor: pointer;">Reject</button>-->
-<!--                    </form>-->
-<!--                </td>-->
-<!--            </tr>-->
-<!--            <tr th:if="${#lists.isEmpty(financeQueue)}">-->
-<!--                <td colspan="4" style="padding: 30px; text-align: center; color: #94A3B8; font-weight: bold;">📭 Finance Treasury Desk Queue is completely empty.</td>-->
-<!--            </tr>-->
-<!--            </tbody>-->
-<!--        </table>-->
-<!--    </div>-->
-
-<!--</main>-->
-<!--</body>-->
-<!--</html>-->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function bindSectionLink(selector, targetId) {
+            document.querySelectorAll(selector).forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    var target = document.getElementById(targetId);
+                    if (!target) return;
+                    e.preventDefault();
+                    target.scrollIntoView({behavior:'smooth', block:'start'});
+                    history.replaceState(null, '', '#' + targetId);
+                });
+            });
+        }
+        bindSectionLink('a[href="#pending"]', 'pending');
+        bindSectionLink('a[href="#history"]', 'history');
+    });
+</script>
+</body></html>

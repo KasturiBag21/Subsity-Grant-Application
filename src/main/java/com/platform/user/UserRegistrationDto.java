@@ -31,8 +31,8 @@ public class UserRegistrationDto {
 
     @NotBlank(message = "Contact number cannot be empty")
     @Pattern(
-            regexp = "^[6-9][0-9]{9}$",
-            message = "Must be a valid 10-digit mobile number starting with 6-9"
+            regexp = "^(?:[6-9][0-9]{9}|\\+91[6-9][0-9]{9})$",
+            message = "Enter a valid 10-digit mobile number, optionally prefixed with +91"
     )
     private String contactNumber;
 
@@ -56,7 +56,7 @@ public class UserRegistrationDto {
     @Size(min = 5, max = 150, message = "Address must be between 5 and 150 characters")
     private String address;
 
-    @NotBlank(message = "Please select a subsidy scheme")
+    // Scheme is selected when the citizen actually applies. It is not required at registration.
     private String schemeName;
 
     @Min(value = 0, message = "Income cannot be negative")

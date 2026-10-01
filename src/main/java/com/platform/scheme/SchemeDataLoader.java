@@ -2,94 +2,133 @@ package com.platform.scheme;
 
 import com.platform.user.User;
 import com.platform.user.UserRepository;
+import com.platform.application.SubsidyApplicationRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 
 @Configuration
 public class SchemeDataLoader {
 
+    @Autowired
+    private SubsidyApplicationRepository applicationRepository;
+
     @Bean
-    CommandLineRunner loadSchemes(SchemeRepository schemeRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    CommandLineRunner loadSchemes(SchemeRepository schemeRepository,
+                                  UserRepository userRepository,
+                                  PasswordEncoder passwordEncoder) {
         return args -> {
 
-            // Runs on EVERY startup, on every teammate's own local database.
-            // For each scheme: if it doesn't exist yet, create it. If it already
-            // exists (e.g. from before this update), just refresh its rules —
-            // remainingBudget is left untouched so nobody's live budget tracking
-            // gets reset. This means nobody has to run any manual SQL; pulling
-            // the code and restarting the app is enough to sync everyone's DB.
-
-            upsertScheme(schemeRepository, "Education Subsidy",
+            upsertScheme(schemeRepository, "Education Subsidy", "🎓",
+                    "A central government scheme providing financial assistance to meritorious students from economically weaker sections enrolled in recognized institutions. The grant covers tuition fees, books, and educational materials.",
+                    "Up to ₹50,000 per academic year — direct bank transfer",
+                    "Students aged 18–30 from low-income families (Annual income ≤ ₹5,00,000)",
                     18, 30, 500000.0, 5000000.0,
-                    "Student", null, false, null);
+                    "Student", null, false, null,
+                    "Aadhaar Card,Bank Passbook,Student ID / Admission Proof,Income Certificate",
+                    "Previous Year Marksheet,College Fee Receipt,Scholarship Certificate");
 
-            upsertScheme(schemeRepository, "Farmer Support Grant",
+            upsertScheme(schemeRepository, "Farmer Support Grant", "🌾",
+                    "Financial support for small and marginal farmers to purchase seeds, fertilizers, and agricultural equipment. The grant helps improve crop yield and income stability for rural farming families.",
+                    "Up to ₹1,00,000 per harvest season — direct bank transfer",
+                    "Farmers and agriculturists aged 18–65 with annual household income ≤ ₹4,00,000",
                     18, 65, 400000.0, 8000000.0,
-                    "Farmer,Agriculturist", null, false, null);
+                    "Farmer,Agriculturist", null, false, null,
+                    "Aadhaar Card,Bank Passbook,Land Ownership Document,Kisan Credit Card",
+                    "Soil Health Card,Crop Insurance Certificate,PM-KISAN Registration Proof");
 
-            upsertScheme(schemeRepository, "Housing Assistance Scheme",
+            upsertScheme(schemeRepository, "Housing Assistance Scheme", "🏠",
+                    "Provides a one-time grant for construction or renovation of pucca housing for eligible families who currently live in kutcha or semi-pucca structures. Applicable to families without ownership of a pucca house.",
+                    "Up to ₹2,00,000 for construction · ₹1,00,000 for renovation",
+                    "Adults 21–70 with annual income ≤ ₹3,00,000 who do not own a pucca house",
                     21, 70, 300000.0, 12000000.0,
-                    null, null, false, null);
+                    null, null, false, null,
+                    "Aadhaar Card,Bank Passbook,Income Certificate,Residence Proof,Property Documents",
+                    "Photograph of existing dwelling,No-objection certificate from local body");
 
-            upsertScheme(schemeRepository, "Women Entrepreneurship Grant",
-                    21, 55, 600000.0, 6000000.0,
-                    null, "Female", false, null);
+            upsertScheme(schemeRepository, "Women Entrepreneurship Grant", "💼",
+                    "Supports women entrepreneurs in establishing or expanding their small businesses. The grant covers startup costs, equipment purchase, working capital, and skill development training. Previous government loans must not be in default.",
+                    "Up to ₹5,00,000 — phased disbursement based on business milestones",
+                    "Women aged 18–55, self-employed or entrepreneur, with annual income ≤ ₹8,00,000",
+                    18, 55, 800000.0, 6000000.0,
+                    null, "Female", false, null,
+                    "Aadhaar Card,Bank Passbook,Business Registration Certificate,Business Plan",
+                    "GST Registration,Trade License,Previous Business Turnover Statement");
 
-            upsertScheme(schemeRepository, "Senior Citizen Assistance",
+            upsertScheme(schemeRepository, "Senior Citizen Assistance", "👴",
+                    "Monthly pension support and medical reimbursement for senior citizens aged 60 and above who are retired or not employed and have limited income. The scheme also provides access to healthcare and rehabilitation services.",
+                    "₹2,000–₹5,000/month + medical reimbursement up to ₹25,000/year",
+                    "Senior citizens aged 60+ with annual income ≤ ₹3,00,000, retired or unemployed",
                     60, 100, 300000.0, 4000000.0,
-                    null, null, false, null);
+                    null, null, false, null,
+                    "Aadhaar Card,Bank Passbook,Age Proof,Income Certificate,Residence Proof",
+                    "Medical Records,Pension Statement,Disability Certificate (if applicable)");
 
-            upsertScheme(schemeRepository, "Divyang Disability Support",
+            upsertScheme(schemeRepository, "Divyang Disability Support", "♿",
+                    "Comprehensive support for persons with disabilities (PwD) including financial assistance for assistive devices, rehabilitation, vocational training, and monthly living allowance. Applicant must hold a valid disability certificate with ≥40% disability.",
+                    "Up to ₹1,50,000 for assistive devices + ₹1,500/month living allowance",
+                    "Persons with Disabilities aged 18–80 with annual income ≤ ₹3,50,000",
                     18, 80, 350000.0, 3500000.0,
-                    null, null, true, null);
+                    null, null, true, null,
+                    "Aadhaar Card,Bank Passbook,Disability Certificate (UDID),Income Certificate",
+                    "Medical Prescription for Assistive Device,Vocational Training Certificate");
 
-            upsertScheme(schemeRepository, "Rural Skill Development Grant",
+            upsertScheme(schemeRepository, "Rural Skill Development Grant", "🔧",
+                    "Skill development and vocational training support for rural youth to improve their employability and income. Covers training fees, certification costs, and a stipend during the training period.",
+                    "Up to ₹75,000 for training + ₹500/month stipend during training",
+                    "Rural youth aged 18–45 with annual income ≤ ₹4,50,000",
                     18, 45, 450000.0, 7000000.0,
-                    null, null, false, "Rural");
+                    null, null, false, "Rural",
+                    "Aadhaar Card,Bank Passbook,Residence Proof (Rural),Income Certificate",
+                    "Skill Assessment Certificate,Enrolment Letter from Training Institute");
 
             System.out.println(">> Master Scheme Rules Sync Complete. 7 schemes verified/updated.");
 
-            if (userRepository.count() == 0) {
-                User field = new User();
-                field.setEmail("field.officer@gmail.com");
-                field.setPassword(passwordEncoder.encode("field123"));
-                field.setRoles(new HashSet<>(Collections.singletonList("ROLE_FIELD_OFFICER")));
-                userRepository.save(field);
-
-                User district = new User();
-                district.setEmail("district.officer@gmail.com");
-                district.setPassword(passwordEncoder.encode("district123"));
-                district.setRoles(new HashSet<>(Collections.singletonList("ROLE_DISTRICT_OFFICER")));
-                userRepository.save(district);
-
-                User finance = new User();
-                finance.setEmail("finance.approver@gmail.com");
-                finance.setPassword(passwordEncoder.encode("finance123"));
-                finance.setRoles(new HashSet<>(Collections.singletonList("ROLE_FINANCE_APPROVER")));
-                userRepository.save(finance);
-            }
+            // Always ensure officer accounts exist — regardless of citizen registrations.
+            ensureOfficer(userRepository, passwordEncoder, "field.officer@gmail.com",    "field123",    "ROLE_FIELD_OFFICER");
+            ensureOfficer(userRepository, passwordEncoder, "district.officer@gmail.com", "district123", "ROLE_DISTRICT_OFFICER");
+            ensureOfficer(userRepository, passwordEncoder, "finance.approver@gmail.com", "finance123",  "ROLE_FINANCE_APPROVER");
+            ensureOfficer(userRepository, passwordEncoder, "disbursement.officer@gmail.com", "disburse123", "ROLE_DISBURSEMENT_OFFICER");
+            ensureOfficer(userRepository, passwordEncoder, "admin@sagar.gov.in", "admin123", "ROLE_ADMIN");
+            System.out.println(">> Officer and administrator accounts verified.");
         };
     }
 
-    /**
-     * Creates the scheme if it's missing, or refreshes its eligibility rules
-     * if it already exists. remainingBudget is intentionally left alone on
-     * existing rows so live budget consumption isn't reset by a restart.
-     */
-    private void upsertScheme(SchemeRepository schemeRepository, String name,
+    private void upsertScheme(SchemeRepository repo, String name, String emoji,
+                              String description, String benefitSummary, String targetBeneficiary,
                               int ageMin, int ageMax, double maxIncome, double totalBudget,
                               String requiredOccupation, String requiredGender,
-                              boolean requiresDisability, String requiredResidenceType) {
+                              boolean requiresDisability, String requiredResidenceType,
+                              String requiredDocuments, String optionalDocuments) {
+        java.util.Optional<Scheme> existing = repo.findBySchemeName(name);
+        if (existing.isPresent()) {
+            // Do not overwrite administrator-managed scheme configuration on every startup.
+            // The loader is now seed-only for existing schemes.
+            Scheme scheme = existing.get();
+            if (scheme.getRemainingBudget() <= 0 && scheme.getTotalRegionalBudget() > 0) {
+                // Legacy databases created before remainingBudget was populated.
+                // Do not resurrect an actually-used budget when applications already exist.
+                if (applicationRepository.countByScheme(scheme) == 0) {
+                    scheme.setRemainingBudget(scheme.getTotalRegionalBudget());
+                    repo.save(scheme);
+                }
+            }
+            return;
+        }
 
-        Scheme scheme = schemeRepository.findBySchemeName(name).orElseGet(Scheme::new);
-        boolean isNew = scheme.getId() == null;
-
+        Scheme scheme = new Scheme();
+        boolean isNew = true;
         scheme.setSchemeName(name);
+        scheme.setEmoji(emoji);
+        scheme.setDescription(description);
+        scheme.setBenefitSummary(benefitSummary);
+        scheme.setTargetBeneficiary(targetBeneficiary);
         scheme.setEligibleAgeMin(ageMin);
         scheme.setEligibleAgeMax(ageMax);
         scheme.setMaxIncomeThreshold(maxIncome);
@@ -98,138 +137,31 @@ public class SchemeDataLoader {
         scheme.setRequiredGender(requiredGender);
         scheme.setRequiresDisability(requiresDisability);
         scheme.setRequiredResidenceType(requiredResidenceType);
+        scheme.setRequiredDocuments(requiredDocuments);
+        scheme.setOptionalDocuments(optionalDocuments);
+        if (isNew) scheme.setRemainingBudget(totalBudget);
+        repo.save(scheme);
+    }
 
-        if (isNew) {
-            scheme.setRemainingBudget(totalBudget);
+    private void ensureOfficer(UserRepository repo, PasswordEncoder encoder,
+                               String email, String rawPassword, String role) {
+        Optional<User> existing = repo.findByEmail(email);
+        if (existing.isEmpty()) {
+            User u = new User();
+            u.setEmail(email);
+            u.setPassword(encoder.encode(rawPassword));
+            u.setRoles(new HashSet<>(Collections.singletonList(role)));
+            repo.save(u);
+            System.out.println(">> Created account: " + email + " [" + role + "]");
+            return;
         }
 
-        schemeRepository.save(scheme);
+        User u = existing.get();
+        if (u.getRoles() == null) u.setRoles(new HashSet<>());
+        if (!u.getRoles().contains(role)) {
+            u.getRoles().add(role);
+            repo.save(u);
+            System.out.println(">> Added role " + role + " to account: " + email);
+        }
     }
 }
-
-
-//package com.platform.scheme;
-//
-//import com.platform.user.User;
-//import com.platform.user.UserRepository;
-//import org.springframework.boot.CommandLineRunner;
-//import org.springframework.context.annotation.Bean;
-//import org.springframework.context.annotation.Configuration;
-//import org.springframework.security.crypto.password.PasswordEncoder;
-//
-//import java.util.Collections;
-//import java.util.HashSet;
-//
-//@Configuration
-//public class SchemeDataLoader {
-//
-//    @Bean
-//    CommandLineRunner loadSchemes(SchemeRepository schemeRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
-//        return args -> {
-//            if (schemeRepository.count() == 0) {
-//
-//                // 1. Education Subsidy
-//                Scheme education = new Scheme();
-//                education.setSchemeName("Education Subsidy");
-//                education.setEligibleAgeMin(18);
-//                education.setEligibleAgeMax(30);
-//                education.setMaxIncomeThreshold(500000.0);
-//                education.setTotalRegionalBudget(5000000.0);
-//                education.setRemainingBudget(5000000.0);
-//                education.setRequiredOccupation("Student");
-//                schemeRepository.save(education);
-//
-//                // 2. Farmer Support Grant
-//                Scheme farmer = new Scheme();
-//                farmer.setSchemeName("Farmer Support Grant");
-//                farmer.setEligibleAgeMin(18);
-//                farmer.setEligibleAgeMax(65);
-//                farmer.setMaxIncomeThreshold(400000.0);
-//                farmer.setTotalRegionalBudget(8000000.0);
-//                farmer.setRemainingBudget(8000000.0);
-//                farmer.setRequiredOccupation("Farmer,Agriculturist");
-//                schemeRepository.save(farmer);
-//
-//                // 3. Housing Assistance Scheme
-//                Scheme housing = new Scheme();
-//                housing.setSchemeName("Housing Assistance Scheme");
-//                housing.setEligibleAgeMin(21);
-//                housing.setEligibleAgeMax(70);
-//                housing.setMaxIncomeThreshold(300000.0);
-//                housing.setTotalRegionalBudget(12000000.0);
-//                housing.setRemainingBudget(12000000.0);
-//                schemeRepository.save(housing);
-//
-//                // 4. Women Entrepreneurship Grant
-//                Scheme business = new Scheme();
-//                business.setSchemeName("Women Entrepreneurship Grant");
-//                business.setEligibleAgeMin(21);
-//                business.setEligibleAgeMax(55);
-//                business.setMaxIncomeThreshold(600000.0);
-//                business.setTotalRegionalBudget(6000000.0);
-//                business.setRemainingBudget(6000000.0);
-//                business.setRequiredGender("Female");
-//                schemeRepository.save(business);
-//
-//                // 5. Senior Citizen Assistance
-//                Scheme senior = new Scheme();
-//                senior.setSchemeName("Senior Citizen Assistance");
-//                senior.setEligibleAgeMin(60);
-//                senior.setEligibleAgeMax(100);
-//                senior.setMaxIncomeThreshold(300000.0);
-//                senior.setTotalRegionalBudget(4000000.0);
-//                senior.setRemainingBudget(4000000.0);
-//                schemeRepository.save(senior);
-//
-//                // NEW 6. Divyang Disability Support Scheme
-//                Scheme divyang = new Scheme();
-//                divyang.setSchemeName("Divyang Disability Support");
-//                divyang.setEligibleAgeMin(18);
-//                divyang.setEligibleAgeMax(80);
-//                divyang.setMaxIncomeThreshold(350000.0);
-//                divyang.setTotalRegionalBudget(3500000.0);
-//                divyang.setRemainingBudget(3500000.0);
-//                divyang.setRequiresDisability(true);
-//                schemeRepository.save(divyang);
-//
-//                // NEW 7. Rural Skill Development Grant
-//                Scheme skill = new Scheme();
-//                skill.setSchemeName("Rural Skill Development Grant");
-//                skill.setEligibleAgeMin(18);
-//                skill.setEligibleAgeMax(45);
-//                skill.setMaxIncomeThreshold(450000.0);
-//                skill.setTotalRegionalBudget(7000000.0);
-//                skill.setRemainingBudget(7000000.0);
-//                skill.setRequiredResidenceType("Rural");
-//                schemeRepository.save(skill);
-//
-//                System.out.println(">> Master Scheme Rules Bootstrap Complete. 7 schemes loaded.");
-//            }
-//
-//            if (userRepository.count() == 0) {
-//                User field = new User();
-//                field.setEmail("field.officer@gmail.com");
-//                field.setPassword(passwordEncoder.encode("field123"));
-//                field.setRoles(new HashSet<>(Collections.singletonList("ROLE_FIELD_OFFICER")));
-//                userRepository.save(field);
-//
-//                User district = new User();
-//                district.setEmail("district.officer@gmail.com");
-//                district.setPassword(passwordEncoder.encode("district123"));
-//                district.setRoles(new HashSet<>(Collections.singletonList("ROLE_DISTRICT_OFFICER")));
-//                userRepository.save(district);
-//
-//                User finance = new User();
-//                finance.setEmail("finance.approver@gmail.com");
-//                finance.setPassword(passwordEncoder.encode("finance123"));
-//                finance.setRoles(new HashSet<>(Collections.singletonList("ROLE_FINANCE_APPROVER")));
-//                userRepository.save(finance);
-//            }
-//        };
-//    }
-//}
-//
-//
-//
-//
-//
