@@ -15,37 +15,106 @@
         .remark{border-left:3px solid #2563eb;background:#f8fafc;padding:11px 13px;margin:9px 0;border-radius:0 8px 8px 0}.meta{font-size:10px;color:#64748b;font-weight:800}.text{margin-top:5px;font-size:12px;line-height:1.5}.empty{color:#94a3b8;font-size:12px}
         .full{grid-column:1/-1}.money{font-weight:900;color:#0f2f78}.small{font-size:11px;color:#64748b;margin-top:3px}.chips{display:flex;flex-wrap:wrap;gap:7px}.chip{display:inline-block;padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:10px;font-weight:800}
         @media(max-width:700px){.grid,.docs{grid-template-columns:1fr}.full{grid-column:auto}.top{align-items:flex-start;flex-direction:column}}
+
+
+        /* Applicant-specific application identity card */
+        .application-identity{background:#fff;border:1px solid #d9e2ef;border-radius:14px;padding:20px 24px;margin:18px 0 20px;box-shadow:0 5px 18px rgba(15,23,42,.05)}
+        .application-identity-inner{display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .application-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:#e67e22;text-transform:uppercase;margin-bottom:6px}
+        .application-name{margin:0;color:#082d72;font-size:25px;line-height:1.15}
+        .application-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;color:#536b96;font-size:13px;font-weight:700}
+        .application-meta .dot{color:#a5b1c2}
+        .application-status-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#eef4ff;color:#174ea6;font-size:11px;font-weight:800}
+        .application-pdf{display:inline-flex;align-items:center;white-space:nowrap;background:#eef3ff;color:#0b43d8;text-decoration:none;font-weight:800;font-size:13px;padding:11px 14px;border-radius:9px}
+        .application-pdf:hover{background:#e2eaff}
+        @media(max-width:760px){.application-identity-inner{align-items:flex-start;flex-direction:column}.application-pdf{width:100%;justify-content:center}}
+
+        /* Fixed SAGAR header - same compact branding used on officer dashboard */
+        .portal-header{position:fixed;top:0;left:0;right:0;z-index:1000;height:118px;box-sizing:border-box;background:#fff;border-bottom:3px solid #ff9933;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+        .portal-header-inner{max-width:1500px;height:100%;margin:0 auto;padding:12px 42px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-sizing:border-box}
+        .brand-block{display:flex;align-items:center;gap:12px;text-decoration:none}
+        .brand-logo-svg{width:58px;height:58px;min-width:58px;display:block}
+        .brand-text h1{margin:0;font-size:30px;line-height:1;color:#000080}
+        .brand-text h1 span{color:#e67e22}
+        .brand-text p{margin:5px 0 0;font-size:10px;line-height:1.2;letter-spacing:.13em;text-transform:uppercase;color:#536b96;font-weight:700;white-space:nowrap}
+        .header-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+        .header-link{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid #dbe3ef;border-radius:8px;background:#fff;color:#000080;text-decoration:none;font-size:12px;font-weight:800}
+        .header-link:hover{background:#eff6ff}
+        body{padding-top:118px}
+        @media(max-width:800px){.portal-header{height:auto;min-height:145px}.portal-header-inner{padding:10px 18px;align-items:flex-start;flex-direction:column}.header-actions{justify-content:flex-start}body{padding-top:170px}}
     </style>
 </head>
 <body>
 
-<main class="page">
-    <div class="top">
-        <div><div style="font-size:11px;font-weight:900;color:#e67e22;text-transform:uppercase;letter-spacing:.08em">SAGAR Portal</div>
-            <h1 th:text="${'Application SUB-' + application.id}">Application Details</h1>
-            <div style="margin-top:5px;color:#64748b;font-size:12px" th:text="${scheme != null ? scheme.schemeName : 'Subsidy Application'}">Scheme</div></div>
-        <a class="back" th:href="@{/admin/dashboard}" th:if="${viewerType == 'ADMIN'}">← Back to Admin Console</a>
-        <a class="back" th:href="@{/dashboard/officer}" th:if="${viewerType == 'OFFICER'}">← Back to Officer Dashboard</a>
-        <a class="back" th:href="@{/dashboard/citizen}" th:if="${viewerType == 'APPLICANT'}">← Back to Dashboard</a><div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><a class="back" style="background:#eef2ff;padding:8px 11px;border-radius:8px" th:href="@{/application/{id}/pdf(id=${application.id})}" th:if="${viewerType == 'APPLICANT'}">⬇ Download Application PDF</a><a class="back" style="background:#eef2ff;padding:8px 11px;border-radius:8px" th:href="@{/officer/application/{id}/pdf(id=${application.id})}" th:if="${viewerType == 'OFFICER' or viewerType == 'ADMIN'}">⬇ Download Application PDF</a><a class="back" style="background:#ecfdf5;padding:8px 11px;border-radius:8px;color:#166534" th:href="@{/application/{id}/receipt(id=${application.id})}" th:if="${viewerType == 'APPLICANT' and application.disbursedAt != null}">🧾 Download Final Disbursement Receipt</a></div>
+<header class="portal-header">
+    <div class="portal-header-inner">
+        <a th:href="${viewerType == 'APPLICANT' ? '/dashboard/citizen' : (viewerType == 'ADMIN' ? '/admin/dashboard' : '/dashboard/officer')}" class="brand-block">
+            <svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+                <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
+                <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+                <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div class="brand-text">
+                <h1>SAGAR<span>.</span></h1>
+                <p>Subsidy &amp; Grant Administration</p>
+            </div>
+        </a>
+        <div class="header-actions">
+            <a class="header-link" th:href="@{/dashboard/citizen}" th:if="${viewerType == 'APPLICANT'}">← Dashboard</a>
+            <a class="header-link" th:href="@{/dashboard/officer}" th:if="${viewerType == 'OFFICER'}">← Officer Dashboard</a>
+            <a class="header-link" th:href="@{/admin/dashboard}" th:if="${viewerType == 'ADMIN'}">← Admin Dashboard</a>
+        </div>
     </div>
+</header>
+
+<main class="page">
+    <section class="application-identity">
+        <div class="application-identity-inner">
+            <div>
+                <div class="application-eyebrow">Applicant Application</div>
+                <h1 class="application-name"
+                    th:text="${beneficiary != null and beneficiary.fullName != null ? beneficiary.fullName : applicantEmail}">
+                    Applicant Name
+                </h1>
+                <div class="application-meta">
+                    <span th:text="${'SUB-' + applicationId}">SUB-7</span>
+                    <span class="dot">•</span>
+                    <span th:text="${appliedSchemeName}">Applied Scheme</span>
+                    <span class="dot">•</span>
+                    <span class="application-status-chip"
+                          th:text="${summaryStatus != null ? #strings.replace(summaryStatus.toString(), '_', ' ') : 'UNKNOWN'}">
+                        STATUS
+                    </span>
+                </div>
+            </div>
+
+            <div>
+                <a class="application-pdf"
+                   th:href="@{/application/{id}/pdf(id=${applicationId})}"
+                   th:if="${viewerType == 'APPLICANT'}">↓ Download Application PDF</a>
+                <a class="application-pdf"
+                   th:href="@{/officer/application/{id}/pdf(id=${applicationId})}"
+                   th:if="${viewerType == 'OFFICER' or viewerType == 'ADMIN'}">↓ Download Application PDF</a>
+            </div>
+        </div>
+    </section>
 
     <section class="card">
         <h2>Application Summary</h2>
-        <div style="margin:-4px 0 14px;color:#64748b;font-size:12px">
-            Complete status and financial summary for
-            <strong th:text="${'SUB-' + application.id}">SUB-1</strong>
-            <span th:if="${scheme != null}"> · <strong th:text="${scheme.schemeName}">Scheme</strong></span>
-        </div>
+        <div class="small" style="margin-bottom:14px" th:text="${'Complete status and financial summary for SUB-' + applicationId + ' · ' + appliedSchemeName}">Application summary</div>
         <div class="grid">
-            <div class="item"><div class="label">Application ID</div><div class="value" th:text="${'SUB-' + application.id}">SUB-1</div></div>
-            <div class="item"><div class="label">Application Date</div><div class="value" th:text="${application.applicationDate != null ? application.applicationDate : 'N/A'}">N/A</div></div>
-            <div class="item"><div class="label">Current Status</div><div class="value"><span class="status" th:text="${application.applicationStatus != null ? application.applicationStatus : 'UNKNOWN'}">UNKNOWN</span></div></div>
-            <div class="item"><div class="label">Eligibility Decision</div><div class="value"><span class="status" th:classappend="${application.eligibilityStatus == true ? ' good' : ' danger'}" th:text="${application.eligibilityStatus == true ? 'Eligible' : (application.eligibilityStatus == false ? 'Not Eligible' : 'Pending')}">Eligible</span></div></div>
-            <div class="item"><div class="label">Eligibility Score</div><div class="value" th:text="${application.eligibilityScore + ' / 100'}">0 / 100</div></div>
-            <div class="item"><div class="label">Resubmission Count</div><div class="value" th:text="${application.resubmissionCount}">0</div></div>
-            <div class="item"><div class="label">Rejection Attempts</div><div class="value" th:text="${application.rejectionCount + ' / 3'}">0 / 3</div></div>
-            <div class="item"><div class="label">Sanction Amount</div><div class="value money" th:text="${'₹' + #numbers.formatDecimal(application.sanctionAmount,1,2)}">₹0.00</div></div>
-            <div class="item"><div class="label">UTR / Transaction Reference</div><div class="value" th:text="${application.utrNumber != null and !#strings.isEmpty(application.utrNumber) ? application.utrNumber : 'Not available'}">Not available</div></div>
+            <div class="item"><div class="label">Application ID</div><div class="value" th:text="${'SUB-' + applicationId}">SUB-1</div></div>
+            <div class="item"><div class="label">Applied Scheme</div><div class="value" th:text="${appliedSchemeName}">N/A</div></div>
+            <div class="item"><div class="label">Application Date</div><div class="value" th:text="${summaryApplicationDate != null ? summaryApplicationDate : 'N/A'}">N/A</div></div>
+            <div class="item"><div class="label">Current Status</div><div class="value"><span class="status" th:text="${summaryStatus != null ? summaryStatus : 'UNKNOWN'}">UNKNOWN</span></div></div>
+            <div class="item"><div class="label">Eligibility Decision</div><div class="value"><span class="status" th:classappend="${summaryEligibilityStatus == true ? ' good' : (summaryEligibilityStatus == false ? ' danger' : ' warn')}" th:text="${summaryEligibilityStatus == true ? 'Eligible' : (summaryEligibilityStatus == false ? 'Not Eligible' : 'Pending')}">Pending</span></div></div>
+            <div class="item"><div class="label">Eligibility Score</div><div class="value" th:text="${summaryEligibilityScore != null ? summaryEligibilityScore + ' / 100' : 'N/A'}">N/A</div></div>
+            <div class="item"><div class="label">Resubmission Count</div><div class="value" th:text="${summaryResubmissionCount != null ? summaryResubmissionCount : 0}">0</div></div>
+            <div class="item"><div class="label">Rejection Attempts</div><div class="value" th:text="${summaryRejectionCount + ' / 3'}">0 / 3</div></div>
+            <div class="item"><div class="label">Sanction Amount</div><div class="value money" th:text="${summarySanctionAmount > 0 ? '₹' + #numbers.formatDecimal(summarySanctionAmount,1,2) : 'Not sanctioned yet'}">Not sanctioned yet</div></div>
+            <div class="item" th:if="${summaryUtrNumber != null and !#strings.isEmpty(summaryUtrNumber)}"><div class="label">UTR / Transaction Reference</div><div class="value" th:text="${summaryUtrNumber}">UTR</div></div>
             <div class="item" th:if="${application.disbursedAt != null}"><div class="label">Disbursed At</div><div class="value" th:text="${application.disbursedAt}">N/A</div></div>
             <div class="item" th:if="${application.coolingPeriodEndDate != null}"><div class="label">Cooling Period End</div><div class="value" th:text="${application.coolingPeriodEndDate}">N/A</div></div>
             <div class="item full" th:if="${application.awaitingResubmission == true}"><div class="label">Applicant Action</div><div class="value">Application is currently awaiting applicant re-verification / requested documents.</div></div>
@@ -56,7 +125,7 @@
         <h2>Applicant Personal &amp; Demographic Details</h2>
         <div class="grid">
             <div class="item"><div class="label">Full Name</div><div class="value" th:text="${beneficiary != null and beneficiary.fullName != null ? beneficiary.fullName : 'N/A'}">N/A</div></div>
-            <div class="item"><div class="label">Email</div><div class="value" th:text="${application.user != null ? application.user.email : 'N/A'}">N/A</div></div>
+            <div class="item"><div class="label">Email</div><div class="value" th:text="${applicantEmail}">N/A</div></div>
             <div class="item"><div class="label">Government ID</div><div class="value" th:text="${beneficiary != null and beneficiary.governmentId != null ? beneficiary.governmentId : 'N/A'}">N/A</div></div>
             <div class="item"><div class="label">Contact Number</div><div class="value" th:text="${beneficiary != null and beneficiary.contactNumber != null ? beneficiary.contactNumber : 'N/A'}">N/A</div></div>
             <div class="item"><div class="label">Age</div><div class="value" th:text="${beneficiary != null ? beneficiary.age : 'N/A'}">N/A</div></div>
@@ -66,7 +135,7 @@
             <div class="item"><div class="label">Occupation</div><div class="value" th:text="${beneficiary != null and beneficiary.occupation != null ? beneficiary.occupation : 'N/A'}">N/A</div></div>
             <div class="item"><div class="label">Annual Income</div><div class="value money" th:text="${beneficiary != null ? '₹' + #numbers.formatDecimal(beneficiary.income,1,2) : 'N/A'}">N/A</div></div>
             <div class="item"><div class="label">State / Region</div><div class="value" th:text="${beneficiary != null and beneficiary.state != null ? beneficiary.state : 'N/A'}">N/A</div></div>
-            <div class="item"><div class="label">Selected Scheme in Profile</div><div class="value" th:text="${beneficiary != null and beneficiary.schemeName != null ? beneficiary.schemeName : 'N/A'}">N/A</div></div>
+            <div class="item"><div class="label">Applied Scheme</div><div class="value" th:text="${appliedSchemeName}">N/A</div></div>
             <div class="item full"><div class="label">Address</div><div class="value" th:text="${beneficiary != null and beneficiary.address != null ? beneficiary.address : 'N/A'}">N/A</div></div>
         </div>
     </section>

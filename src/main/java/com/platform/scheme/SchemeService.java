@@ -90,6 +90,7 @@ public class SchemeService {
         scheme.setEligibleAgeMax(form.getEligibleAgeMax());
         scheme.setMaxIncomeThreshold(form.getMaxIncomeThreshold());
         scheme.setTotalRegionalBudget(form.getTotalRegionalBudget());
+        scheme.setMaxSanctionAmount(form.getMaxSanctionAmount());
         scheme.setRequiredOccupation(clean(form.getRequiredOccupation(), null));
         scheme.setRequiredGender(clean(form.getRequiredGender(), null));
         scheme.setRequiresDisability(form.isRequiresDisability());
@@ -130,6 +131,12 @@ public class SchemeService {
         }
         if (form.getTotalRegionalBudget() == null || form.getTotalRegionalBudget() <= 0) {
             throw new IllegalArgumentException("Regional budget must be greater than zero.");
+        }
+        if (form.getMaxSanctionAmount() == null || form.getMaxSanctionAmount() <= 0) {
+            throw new IllegalArgumentException("Maximum sanction per application must be greater than zero.");
+        }
+        if (form.getMaxSanctionAmount() > form.getTotalRegionalBudget()) {
+            throw new IllegalArgumentException("Maximum sanction per application cannot exceed the scheme regional budget.");
         }
     }
 

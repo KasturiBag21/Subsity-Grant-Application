@@ -258,8 +258,30 @@ public class EligibilityService {
         app.setFinanceApprovalRemarks(note);
         switch (normalizeAction(action)) {
             case "APPROVE" -> {
+                if (app.getScheme() == null) {
+                    throw new IllegalStateException("Application has no scheme configuration.");
+                }
+                double schemeCeiling = app.getScheme().getMaxSanctionAmount();
+                double availableBudget = app.getScheme().getRemainingBudget();
+                if (schemeCeiling <= 0) {
+                    throw new IllegalStateException("Scheme sanction ceiling is not configured. Ask the administrator to configure it.");
+                }
+                if (sanctionAmount <= 0) {
+                    throw new IllegalArgumentException("Enter a sanction amount greater than zero.");
+                }
+                if (sanctionAmount > schemeCeiling + 0.001) {
+                    throw new IllegalArgumentException("Sanction amount cannot exceed the scheme limit of ₹"
+                            + String.format("%,.2f", schemeCeiling) + ".");
+                }
+                if (sanctionAmount > availableBudget + 0.001) {
+                    throw new IllegalArgumentException("Sanction amount cannot exceed the current scheme budget of ₹"
+                            + String.format("%,.2f", availableBudget) + ".");
+                }
+                if (remarks == null || remarks.isBlank()) {
+                    throw new IllegalArgumentException("Finance sanction remarks are required.");
+                }
+                app.setSanctionAmount(sanctionAmount);
                 app.setApplicationStatus(ApplicationStatus.FUND_DISBURSEMENT);
-                if (sanctionAmount > 0) app.setSanctionAmount(sanctionAmount);
             }
             case "REJECT" -> rejectApplication(app);
             case "SENDBACK" -> app.setApplicationStatus(ApplicationStatus.DISTRICT_REVIEW);
@@ -302,12 +324,20 @@ public class EligibilityService {
 
     /** Citizen has supplied the requested documents and sends the application back into Field Verification. */
     public void markApplicantResubmitted(SubsidyApplication app) {
+        // After the third rejection the same application waits through cooling.
+        // Once cooling has expired, resubmitting starts a new 0/3 rejection cycle
+        // without creating a second application record for the same scheme.
+        if (app.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD
+                && !app.isCoolingPeriodActive()) {
+            app.setRejectionCount(0);
+        }
         app.setApplicationStatus(ApplicationStatus.FIELD_VERIFICATION);
         app.setAwaitingResubmission(false);
         app.setResubmissionCount(app.getResubmissionCount() + 1);
         app.setCoolingPeriodEndDate(null);
         applicationRepository.save(app);
-        addRemark(app, "APPLICANT", "BENEFICIARY", "RESUBMITTED", "Applicant uploaded requested documents and resubmitted the application for verification.");
+        addRemark(app, "APPLICANT", "BENEFICIARY", "RESUBMITTED",
+                "Applicant continued/resubmitted the same application for verification.");
     }
 
     /**

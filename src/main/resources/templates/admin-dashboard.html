@@ -110,6 +110,11 @@
                             <div class="help">Remaining budget is calculated by the platform; it is not manually overwritten here.</div>
                         </div>
                         <div class="field-wrap">
+                            <label class="label">Maximum Sanction / Application *</label>
+                            <input class="field" type="number" min="0.01" step="0.01" th:field="*{maxSanctionAmount}">
+                            <div class="help">Finance cannot sanction more than this amount to one application.</div>
+                        </div>
+                        <div class="field-wrap">
                             <label class="label">Required Occupation</label>
                             <input class="field" th:field="*{requiredOccupation}" placeholder="Student,Farmer,Agriculturist">
                         </div>

@@ -39,6 +39,10 @@ public class SchemeAdminForm {
     @DecimalMin(value = "0.0", inclusive = false, message = "Regional budget must be greater than zero.")
     private Double totalRegionalBudget;
 
+    @NotNull(message = "Maximum sanction per application is required.")
+    @DecimalMin(value = "0.01", inclusive = true, message = "Maximum sanction must be greater than zero.")
+    private Double maxSanctionAmount;
+
     private String requiredOccupation;
     private String requiredGender;
     private boolean requiresDisability;
@@ -58,6 +62,7 @@ public class SchemeAdminForm {
         form.setEligibleAgeMax(scheme.getEligibleAgeMax());
         form.setMaxIncomeThreshold(scheme.getMaxIncomeThreshold());
         form.setTotalRegionalBudget(scheme.getTotalRegionalBudget());
+        form.setMaxSanctionAmount(scheme.getMaxSanctionAmount());
         form.setRequiredOccupation(scheme.getRequiredOccupation());
         form.setRequiredGender(scheme.getRequiredGender());
         form.setRequiresDisability(scheme.isRequiresDisability());
@@ -87,6 +92,8 @@ public class SchemeAdminForm {
     public void setMaxIncomeThreshold(Double maxIncomeThreshold) { this.maxIncomeThreshold = maxIncomeThreshold; }
     public Double getTotalRegionalBudget() { return totalRegionalBudget; }
     public void setTotalRegionalBudget(Double totalRegionalBudget) { this.totalRegionalBudget = totalRegionalBudget; }
+    public Double getMaxSanctionAmount() { return maxSanctionAmount; }
+    public void setMaxSanctionAmount(Double maxSanctionAmount) { this.maxSanctionAmount = maxSanctionAmount; }
     public String getRequiredOccupation() { return requiredOccupation; }
     public void setRequiredOccupation(String requiredOccupation) { this.requiredOccupation = requiredOccupation; }
     public String getRequiredGender() { return requiredGender; }

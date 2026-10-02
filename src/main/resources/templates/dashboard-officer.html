@@ -105,7 +105,35 @@
             #pending,#history{scroll-margin-top:190px}
         }
     </style>
-</head>
+
+    <style>
+        /* District Officer is review-only for document verification. */
+        .district-readonly-doc{display:flex;justify-content:space-between;align-items:center;gap:12px}
+        .district-doc-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+        .district-status{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900}
+        .status-verified{background:#dcfce7;color:#166534}
+        .status-pending{background:#fff7ed;color:#9a3412}
+        .district-pending-note{margin-top:9px;padding:9px 11px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:8px;font-size:11px}
+        .detailed-review-btn{display:inline-flex!important;padding:9px 11px!important;border-radius:8px;background:#eef4ff!important}
+
+        /* Flash messages are compact toasts instead of full-width bars. */
+        .flash.success,.flash.error{
+            position:fixed!important;right:24px!important;top:132px!important;z-index:2000!important;
+            width:auto!important;max-width:420px!important;margin:0!important;padding:12px 16px!important;
+            border-radius:10px!important;box-shadow:0 10px 30px rgba(15,23,42,.16)!important;
+        }
+        @media(max-width:760px){.flash.success,.flash.error{left:14px!important;right:14px!important;top:105px!important;max-width:none!important}}
+    </style>
+
+    <style>
+        .finance-rule-box{margin:7px 0;padding:9px 10px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:9px;min-width:210px}
+        .finance-rule-box>div{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:10px}
+        .finance-rule-box span{color:#64748b}.finance-rule-box strong{color:#0b2f70;text-align:right}
+        .sanction-help{font-size:9px;color:#64748b;margin:5px 0 7px;line-height:1.35}
+    </style>
+    <style>
+        .officer-notify{position:relative}.officer-notify-btn{position:relative;border:1px solid #dbe3ef;background:#fff;color:#000080;border-radius:8px;padding:9px 12px;font-size:10px;font-weight:900;cursor:pointer}.officer-notify-count{position:absolute;right:-6px;top:-7px;min-width:18px;height:18px;border-radius:20px;background:#dc2626;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center}.officer-notify-panel{display:none;position:absolute;right:0;top:42px;width:370px;max-height:430px;overflow:auto;background:#fff;border:1px solid #dbe3ef;border-radius:10px;box-shadow:0 16px 40px rgba(15,23,42,.2);z-index:4000;padding:10px}.officer-notify-panel.open{display:block}.officer-note{margin-top:7px;padding:9px;border-radius:7px;background:#fef2f2;border-left:4px solid #dc2626;color:#991b1b;font-size:10px}.urgent-section{border:2px solid #fecaca!important;background:#fffafa!important}.urgent-card{padding:10px;margin-top:8px;background:#fff;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:8px}
+    </style></head>
 
 <body>
 
@@ -142,7 +170,7 @@
             </a>
 
             <a class="header-link" href="/officer/applications/history/pdf">⬇ History PDF</a>
-            <a class="header-link" href="/officer/applications/history/excel">⬇ History Excel</a>
+            <div class="officer-notify"><button type="button" class="officer-notify-btn" onclick="toggleOfficerNotifications()">🔔 Notifications<span class="officer-notify-count" sec:authorize="hasAnyRole('FINANCE_APPROVER','DISBURSEMENT_OFFICER')" th:if="${urgentComplianceMilestones != null and !#lists.isEmpty(urgentComplianceMilestones)}" th:text="${#lists.size(urgentComplianceMilestones)}">0</span></button><div id="officerNotifyPanel" class="officer-notify-panel"><strong>Officer Notifications</strong><div sec:authorize="hasAnyRole('FINANCE_APPROVER','DISBURSEMENT_OFFICER')"><div th:if="${urgentComplianceMilestones == null or #lists.isEmpty(urgentComplianceMilestones)}" style="padding:12px;font-size:10px;color:#64748b;">No urgent compliance submissions.</div><div class="officer-note" th:each="m : ${urgentComplianceMilestones}"><strong>🔴 Applicant submitted requested document</strong><br><span th:text="${'SUB-' + m.plan.application.id + ' · ' + m.milestoneName}">Application</span><br><span th:text="${m.complianceOriginalFilename}">Document</span><br><a th:href="@{/milestone3/disbursement/{id}(id=${m.plan.application.id})}" style="font-weight:900;color:#991b1b;">Open urgently →</a></div></div><div sec:authorize="!hasAnyRole('FINANCE_APPROVER','DISBURSEMENT_OFFICER')" style="padding:12px;font-size:10px;color:#64748b;">Queue notifications are shown in your dashboard sections.</div></div></div><a class="header-link" href="/officer/applications/history/excel">⬇ History Excel</a>
 
             <form th:action="@{/logout}" method="post" class="logout-form">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
@@ -187,7 +215,7 @@
                         <div class="score" th:text="'Score: ' + ${app.eligibilityScore} + '/100'">Score</div>
                     </td>
                     <td>
-                        <div class="docs"><div class="doc-review" th:each="doc : ${app.documents}"><div class="doc-name" th:text="${doc.documentName}">Document</div><div class="doc-file" th:text="${doc.originalFilename}">filename.pdf</div><div class="doc-status-line">Status: <strong th:text="${doc.verificationStatus == null ? 'PENDING' : doc.verificationStatus}">PENDING</strong></div><div class="doc-actions"><a class="btn view-doc" th:href="${doc.url}" target="_blank" rel="noopener">👁 View</a><form th:action="@{/officer/field/document/{id}/{action}(id=${doc.id},action='VERIFY')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="Document verified by Field Officer."><button class="btn approve" type="submit">✓ Verify</button></form><form th:action="@{/officer/field/document/{id}/{action}(id=${doc.id},action='RESUBMIT')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="This document needs to be resubmitted by the applicant."><button class="btn resubmit" type="submit">↻ Needs Resubmission</button></form></div><div class="doc-hint" th:if="${doc.verificationStatus == 'RESUBMIT_REQUIRED'}">Applicant must replace this document.</div></div></div>
+                        <div class="docs"><div class="doc-review" th:each="doc : ${app.documents}"><div class="doc-name" th:text="${doc.documentName}">Document</div><div class="doc-file" th:text="${doc.originalFilename}">filename.pdf</div><div class="doc-status-line">Status: <strong th:text="${doc.verificationStatus == null ? 'PENDING' : doc.verificationStatus}">PENDING</strong></div><div class="doc-actions"><a class="btn view-doc" th:href="${doc.url}" target="_blank" rel="noopener">👁 View</a><form th:action="@{/officer/field/document/{id}/{action}(id=${doc.id},action='VERIFY')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="Document verified by Field Officer."><button class="btn approve" type="submit">✓ Verify</button></form><form th:action="@{/officer/field/document/{id}/{action}(id=${doc.id},action='RESUBMIT')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="This document needs to be resubmitted by the applicant."><button class="btn resubmit" type="submit">↻ Select for Resubmission</button></form></div><div class="doc-hint" th:if="${doc.verificationStatus == 'RESUBMIT_REQUIRED'}">✓ Selected for resubmission — review the remaining documents, then click Send to Applicant.</div></div></div>
                     </td>
                     <td>
                         <form class="action-form" th:action="@{/officer/field/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><textarea class="remarks-area" name="remarks" placeholder="Field verification remark"></textarea>
@@ -199,9 +227,78 @@
 
     <section class="queue" sec:authorize="hasAnyRole('FIELD_OFFICER')" th:if="${!#lists.isEmpty(resubmittedQueue)}"><div class="queue-head"><h2>🔄 Applicant Resubmissions</h2><p>Applications returned by citizens for fresh field verification.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant</th><th>Score</th><th>Actions</th></tr></thead><tbody><tr th:each="app : ${resubmittedQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td><td th:text="${app.user.email}">email</td><td class="score" th:text="${app.eligibilityScore} + '/100'">0/100</td><td><form th:action="@{/officer/field/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><textarea class="remarks-area" name="remarks" placeholder="Verification remark"></textarea><button class="btn approve" type="submit">✓ Approve to District</button><button class="btn reject" type="submit" th:formaction="@{/officer/field/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button></form></td></tr></tbody></table></div></section>
 
-    <section class="queue" sec:authorize="hasAnyRole('DISTRICT_OFFICER')"><div class="queue-head"><h2>🏛️ District Review</h2><p>Review field-verified applications and move them to Finance, Field, Applicant re-verification, or cooling period.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant / Score</th><th>Documents</th><th>Review</th><th>Actions</th></tr></thead><tbody>
-    <tr th:each="app : ${districtQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a></td><td><div class="email" th:text="${app.user.email}">email</div><div th:text="${app.user.beneficiary != null ? app.user.beneficiary.fullName : 'N/A'}">Applicant</div><div class="score" th:text="'Score: ' + ${app.eligibilityScore} + '/100'">Score</div></td><td><div class="docs"><div class="doc-review" th:each="doc : ${app.documents}"><div class="doc-name" th:text="${doc.documentName}">Document</div><div class="doc-file" th:text="${doc.originalFilename}">filename.pdf</div><div class="doc-status-line">Status: <strong th:text="${doc.verificationStatus == null ? 'PENDING' : doc.verificationStatus}">PENDING</strong></div><div class="doc-actions"><a class="btn view-doc" th:href="${doc.url}" target="_blank" rel="noopener">👁 View</a><form th:action="@{/officer/district/document/{id}/{action}(id=${doc.id},action='VERIFY')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="Document verified by District Officer."><button class="btn approve" type="submit">✓ Verify</button></form><form th:action="@{/officer/district/document/{id}/{action}(id=${doc.id},action='RESUBMIT')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="remarks" value="This document needs to be resubmitted by the applicant."><button class="btn resubmit" type="submit">↻ Needs Resubmission</button></form></div><div class="doc-hint" th:if="${doc.verificationStatus == 'RESUBMIT_REQUIRED'}">Applicant must replace this document.</div></div></div><div class="pending" th:if="${!app.missingOptionalDocuments.isEmpty()}"><strong>Optional pending:</strong> <span th:text="${#strings.listJoin(app.missingOptionalDocuments, ', ')}">—</span></div></td><td><a class="info" th:href="@{/officer/district/eligibility/{id}(id=${app.id})}">📊 Detailed Review</a></td><td><form class="action-form" th:action="@{/officer/district/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><textarea class="remarks-area" name="remarks" placeholder="District review remark"></textarea><div class="btn-row"><button class="btn approve" type="submit">✓ Approve</button><button class="btn send" type="submit" th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='SENDBACK')}">↩ Send to Field</button><button class="btn applicant" type="submit" th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='SEND_BACK_APPLICANT')}">📨 Send to Applicant</button><button class="btn reject" type="submit" th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button></div></form></td></tr>
-    <tr th:if="${#lists.isEmpty(districtQueue)}"><td colspan="5" class="empty">District review queue is empty.</td></tr></tbody></table></div></section>
+    <section id="district-queue" class="queue" sec:authorize="hasAnyRole('DISTRICT_OFFICER')">
+        <div class="queue-head">
+            <h2>🏛️ District Review</h2>
+            <p>Review the Field Officer's verification. Documents are read-only here; pending verification should be returned to Field with a remark.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="app-table">
+                <thead>
+                <tr><th>ID</th><th>Applicant / Score</th><th>Documents &amp; Field Status</th><th>Review</th><th>District Decision</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="app : ${districtQueue}" th:id="${'application-' + app.id}">
+                    <td>
+                        <span class="app-id" th:text="'#' + ${app.id}">#1</span><br>
+                        <a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a>
+                        <a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a>
+                    </td>
+                    <td>
+                        <div class="email" th:text="${app.user.email}">email</div>
+                        <div th:text="${app.user.beneficiary != null ? app.user.beneficiary.fullName : 'N/A'}">Applicant</div>
+                        <div class="score" th:text="'Score: ' + ${app.eligibilityScore} + '/100'">Score</div>
+                    </td>
+                    <td>
+                        <div class="docs">
+                            <div class="doc-review district-readonly-doc" th:each="doc : ${app.documents}">
+                                <div>
+                                    <div class="doc-name" th:text="${doc.documentName}">Document</div>
+                                    <div class="doc-file" th:text="${doc.originalFilename}">filename.pdf</div>
+                                </div>
+                                <div class="district-doc-bottom">
+                                    <span class="district-status"
+                                          th:classappend="${doc.verificationStatus == 'VERIFIED' ? ' status-verified' : ' status-pending'}"
+                                          th:text="${doc.verificationStatus == null ? 'PENDING' : doc.verificationStatus}">PENDING</span>
+                                    <a class="btn view-doc" th:href="${doc.url}" target="_blank" rel="noopener">👁 View</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="district-pending-note"
+                             th:if="${app.documents.?[verificationStatus == null or verificationStatus != 'VERIFIED'].size() > 0}">
+                            ⚠ One or more documents are not verified. Add a remark and use <strong>Send to Field</strong>.
+                        </div>
+                        <div class="pending" th:if="${!app.missingOptionalDocuments.isEmpty()}">
+                            <strong>Optional pending:</strong>
+                            <span th:text="${#strings.listJoin(app.missingOptionalDocuments, ', ')}">—</span>
+                        </div>
+                    </td>
+                    <td>
+                        <a class="info detailed-review-btn" th:href="@{/officer/district/eligibility/{id}(id=${app.id})}">📊 Detailed Review</a>
+                    </td>
+                    <td>
+                        <form class="action-form preserve-position"
+                              th:attr="data-app-id=${app.id}"
+                              th:action="@{/officer/district/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <textarea class="remarks-area" name="remarks" placeholder="District review remark"></textarea>
+                            <div class="btn-row">
+                                <button class="btn approve" type="submit">✓ Approve</button>
+                                <button class="btn send" type="submit"
+                                        th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='SENDBACK')}">↩ Send to Field</button>
+                                <button class="btn applicant" type="submit"
+                                        th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='SEND_BACK_APPLICANT')}">📨 Send to Applicant</button>
+                                <button class="btn reject" type="submit"
+                                        th:formaction="@{/officer/district/action/{id}/{action}(id=${app.id},action='REJECT')}">✗ Reject</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(districtQueue)}"><td colspan="5" class="empty">District review queue is empty.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 
     <section class="queue" sec:authorize="hasAnyRole('FINANCE_APPROVER')">
         <div class="queue-head"><h2>💰 Finance Approval</h2><p>Verify applicant contact, score and Bank Passbook before sanctioning funds.</p></div>
@@ -233,13 +330,24 @@
                         <form th:action="@{/officer/finance/{id}/verify-bank-details(id=${app.id})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="approve" value="false"><button class="btn reject" type="submit">↩ Request Correction</button></form></div>
                 </div></td>
                 <td><strong th:text="${app.scheme.schemeName}">Scheme</strong><br>
-                    Remaining: ₹<span th:text="${#numbers.formatDecimal(app.scheme.remainingBudget,1,2)}">0</span>
+                    <div class="finance-rule-box">
+                        <div><span>Scheme benefit</span><strong th:text="${app.scheme.benefitSummary != null ? app.scheme.benefitSummary : 'Configured scheme assistance'}">Benefit</strong></div>
+                        <div><span>Maximum sanction / application</span><strong th:text="${'₹' + #numbers.formatDecimal(app.scheme.maxSanctionAmount,1,2)}">₹0</strong></div>
+                        <div><span>Current scheme budget</span><strong th:text="${'₹' + #numbers.formatDecimal(app.scheme.remainingBudget,1,2)}">₹0</strong></div>
+                        <div><span>System recommended ceiling</span>
+                            <strong th:text="${'₹' + #numbers.formatDecimal((app.scheme.maxSanctionAmount < app.scheme.remainingBudget ? app.scheme.maxSanctionAmount : app.scheme.remainingBudget),1,2)}">₹0</strong>
+                        </div>
+                    </div>
                     <div class="score" th:text="'Eligibility Score: ' + ${app.eligibilityScore} + '/100'">Eligibility Score: 0/100</div></td>
                 <td><form class="action-form" th:action="@{/officer/finance/action/{id}/{action}(id=${app.id},action='APPROVE')}" method="post">
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <label style="display:block;font-size:10px;font-weight:800;margin-bottom:5px">Sanctioned Amount (₹)</label>
-                    <input class="sanction" type="number" name="sanctionAmount" min="0.01" step="0.01" th:attr="max=${app.scheme.remainingBudget}" th:value="${app.sanctionAmount > 0 ? app.sanctionAmount : ''}" placeholder="Enter sanctioned amount" required>
-                    <textarea class="remarks-area" name="remarks" placeholder="Finance verification / sanction remark"></textarea>
+                    <label style="display:block;font-size:10px;font-weight:800;margin-bottom:5px">Finance Sanction Amount (₹)</label>
+                    <input class="sanction" type="number" name="sanctionAmount" min="0.01" step="0.01"
+                           th:attr="max=${(app.scheme.maxSanctionAmount < app.scheme.remainingBudget ? app.scheme.maxSanctionAmount : app.scheme.remainingBudget)}"
+                           th:value="${app.sanctionAmount > 0 ? app.sanctionAmount : (app.scheme.maxSanctionAmount < app.scheme.remainingBudget ? app.scheme.maxSanctionAmount : app.scheme.remainingBudget)}"
+                           placeholder="Enter sanctioned amount" required>
+                    <div class="sanction-help">Amount must be within the scheme's per-application ceiling and available budget. A lower amount is allowed when justified.</div>
+                    <textarea class="remarks-area" name="remarks" placeholder="Required: explain the sanction basis / reason for this amount"></textarea>
                     <div class="btn-row"><button class="btn approve" type="submit">✓ Verify &amp; Sanction</button>
                         <button class="btn send" type="submit" formnovalidate th:formaction="@{/officer/finance/action/{id}/{action}(id=${app.id},action='SENDBACK')}">↩ Send to District</button>
                         <button class="btn applicant" type="submit" formnovalidate th:formaction="@{/officer/finance/action/{id}/{action}(id=${app.id},action='SEND_BACK_APPLICANT')}">📨 Send to Applicant</button>
@@ -248,28 +356,39 @@
             <tr th:if="${#lists.isEmpty(financeQueue)}"><td colspan="5" class="empty">Finance queue is empty.</td></tr>
             </tbody></table></div></section>
 
-    <section class="queue" sec:authorize="hasAnyRole('FINANCE_APPROVER')"><div class="queue-head"><h2>🏦 Finance — Staged Fund Disbursement</h2><p>Configure staged releases, verify compliance, and record milestone-wise fund releases.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant</th><th>Sanction</th><th>Actions</th></tr></thead><tbody><tr th:each="app : ${disbursalQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a><br><a class="info" th:href="@{/milestone3/disbursement/{id}(id=${app.id})}">📅 Open Staged Disbursement &amp; Compliance</a><br><a class="info" th:href="@{/milestone3/analytics(applicationId=${app.id})}">📊 Scheme Fund Analytics</a></td><td th:text="${app.user.email}">email</td><td th:text="'₹' + ${#numbers.formatDecimal(app.sanctionAmount,1,2)}">₹0</td><td>
-        <div class="action-form">
-            <a class="btn approve" style="display:inline-block;text-decoration:none;text-align:center;margin-bottom:8px;" th:href="@{/milestone3/disbursement/{id}(id=${app.id})}">🏦 Open Finance Disbursement Control</a>
-            <div style="font-size:10px;color:#64748b;line-height:1.5;">Staged release and compliance verification are completed from Finance control. The transaction ID is generated automatically only after a successful fund release.</div>
-            <div class="btn-row" style="margin-top:8px;">
-                <form method="post" th:action="@{/milestone3/disbursement/{id}/hold(id=${app.id})}">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <input type="hidden" name="remarks" value="Disbursement workflow placed on hold pending Finance review.">
-                    <button class="btn hold" type="submit">⏸ Hold</button>
-                </form>
+    <section class="queue urgent-section" sec:authorize="hasAnyRole('FINANCE_APPROVER','DISBURSEMENT_OFFICER')" th:if="${urgentComplianceMilestones != null and !#lists.isEmpty(urgentComplianceMilestones)}"><div class="queue-head"><h2>🔴 Urgent — Applicant Compliance Submitted</h2><p>Applicants uploaded Finance-requested documents. Review these before the normal queue.</p></div><div style="padding:10px 14px 16px;"><div class="urgent-card" th:each="m : ${urgentComplianceMilestones}"><strong th:text="${'SUB-' + m.plan.application.id + ' · ' + m.milestoneName}">SUB</strong><div style="font-size:10px;" th:text="${'Submitted: ' + m.complianceOriginalFilename}">File</div><a class="btn reject" style="display:inline-block;text-decoration:none;margin-top:7px;" th:href="@{/milestone3/disbursement/{id}(id=${m.plan.application.id})}">Review Now →</a></div></div></section><section class="queue" sec:authorize="hasAnyRole('FINANCE_APPROVER')"><div class="queue-head"><h2>🏦 Finance — Staged Fund Disbursement</h2><p>Configure staged releases, verify compliance, and record milestone-wise fund releases.</p></div><div class="table-wrap"><table class="app-table"><thead><tr><th>ID</th><th>Applicant</th><th>Sanction</th><th>Actions</th></tr></thead><tbody><tr th:each="app : ${disbursalQueue}"><td><span class="app-id" th:text="'#' + ${app.id}">#1</span><br><a class="info" th:href="@{/officer/application/{id}(id=${app.id})}">👁 View Application Details</a><a class="info" th:href="@{/officer/application/{id}/pdf(id=${app.id})}">⬇ PDF</a><br><a class="info" th:href="@{/milestone3/disbursement/{id}(id=${app.id})}">📅 Open Staged Disbursement &amp; Compliance</a><br><a class="info" th:href="@{/milestone3/analytics(applicationId=${app.id})}">📊 Scheme Fund Analytics</a></td><td th:text="${app.user.email}">email</td><td th:text="'₹' + ${#numbers.formatDecimal(app.sanctionAmount,1,2)}">₹0</td><td>
+    <div class="action-form">
+        <a class="btn approve" style="display:inline-block;text-decoration:none;text-align:center;margin-bottom:8px;" th:href="@{/milestone3/disbursement/{id}(id=${app.id})}">🏦 Open Finance Disbursement Control</a>
+        <div style="font-size:10px;color:#64748b;line-height:1.5;">Staged release and compliance verification are completed from Finance control. The transaction ID is generated automatically only after a successful fund release.</div>
 
-                <form method="post" th:action="@{/officer/disbursal/action/{id}/{action}(id=${app.id},action='SEND_FOR_APPROVAL')}">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <button class="btn send" type="submit">⬆ Send to Approver</button>
-                </form>
-                <form method="post" th:action="@{/officer/disbursal/action/{id}/{action}(id=${app.id},action='REJECT')}">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <button class="btn reject" type="submit">✗ Reject Application</button>
-                </form>
+        <div th:if="${officerDisbursementPlans != null and officerDisbursementPlans.containsKey(app.id)}" style="margin-top:8px;">
+            <div th:each="milestone : ${officerDisbursementPlans[app.id].milestones}"
+                 th:if="${milestone.lastReminderType != null}"
+                 th:style="${milestone.lastReminderType == 'OVERDUE' ? 'margin-top:5px;padding:7px 9px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:7px;font-size:10px;font-weight:800;' : 'margin-top:5px;padding:7px 9px;background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;border-radius:7px;font-size:10px;font-weight:800;'}">
+                <span th:text="${milestone.lastReminderType == 'OVERDUE' ? '⚠ OVERDUE — ' : '⏰ DUE SOON — '}">Reminder</span>
+                <span th:text="${milestone.milestoneName}">Milestone</span>
+                <span th:text="${' · Due ' + #temporals.format(milestone.dueDate,'dd MMM yyyy')}">Due date</span>
             </div>
         </div>
-    </td></tr><tr th:if="${#lists.isEmpty(disbursalQueue)}"><td colspan="4" class="empty">Finance staged-disbursement queue is empty.</td></tr></tbody></table></div></section>
+
+        <div class="btn-row" style="margin-top:8px;">
+            <form method="post" th:action="@{/milestone3/disbursement/{id}/hold(id=${app.id})}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <input type="hidden" name="remarks" value="Disbursement workflow placed on hold pending Finance review.">
+                <button class="btn hold" type="submit">⏸ Hold</button>
+            </form>
+
+            <form method="post" th:action="@{/officer/disbursal/action/{id}/{action}(id=${app.id},action='SEND_FOR_APPROVAL')}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn send" type="submit">⬆ Send to Approver</button>
+            </form>
+            <form method="post" th:action="@{/officer/disbursal/action/{id}/{action}(id=${app.id},action='REJECT')}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn reject" type="submit">✗ Reject Application</button>
+            </form>
+        </div>
+    </div>
+</td></tr><tr th:if="${#lists.isEmpty(disbursalQueue)}"><td colspan="4" class="empty">Finance staged-disbursement queue is empty.</td></tr></tbody></table></div></section>
 
     <section id="history" class="queue">
         <div class="queue-head"><h2>🕘 Completed Applications History</h2><p>Completed applications are retained here for review and reporting.</p></div>
@@ -296,4 +415,37 @@
         bindSectionLink('a[href="#history"]', 'history');
     });
 </script>
-</body></html>
+
+<script>
+    (function () {
+        var KEY = 'sagarOfficerDashboardScrollY';
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (form && form.method && form.method.toLowerCase() === 'post') {
+                sessionStorage.setItem(KEY, String(window.scrollY || document.documentElement.scrollTop || 0));
+            }
+        }, true);
+
+        window.addEventListener('load', function () {
+            var saved = sessionStorage.getItem(KEY);
+            if (saved !== null) {
+                sessionStorage.removeItem(KEY);
+                requestAnimationFrame(function () {
+                    window.scrollTo({top: parseInt(saved, 10) || 0, left: 0, behavior: 'instant'});
+                });
+            }
+
+            document.querySelectorAll('.flash.success, .flash.error').forEach(function (toast) {
+                setTimeout(function () {
+                    toast.style.transition = 'opacity .25s ease, transform .25s ease';
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-8px)';
+                    setTimeout(function () { toast.remove(); }, 280);
+                }, 2600);
+            });
+        });
+    })();
+</script>
+
+<script>function toggleOfficerNotifications(){document.getElementById('officerNotifyPanel').classList.toggle('open');}document.addEventListener('click',e=>{const p=document.getElementById('officerNotifyPanel');if(p&&!e.target.closest('.officer-notify'))p.classList.remove('open');});</script></body></html>

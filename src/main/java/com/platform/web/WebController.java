@@ -1,7 +1,9 @@
 package com.platform.web;
 
+import java.util.ArrayList;
 import com.platform.application.*;
 import com.platform.disbursement.DisbursementPlan;
+import com.platform.disbursement.DisbursementMilestone;
 import com.platform.disbursement.DisbursementPlanRepository;
 import com.platform.scheme.Scheme;
 import com.platform.scheme.SchemeService;
@@ -191,6 +193,22 @@ public class WebController {
         model.addAttribute("financeQueue", financeQueue);
         model.addAttribute("disbursalQueue", disbursalQueue);
 
+        // Finance reminder view: expose the current staged plan for each active
+        // disbursement application so due-soon / overdue reminders are visible
+        // to the officer as well as the applicant.
+        Map<Long, DisbursementPlan> officerDisbursementPlans = new LinkedHashMap<>();
+        if (isDisburse) {
+            for (SubsidyApplication application : disbursalQueue) {
+                disbursementPlanRepository.findByApplicationId(application.getId())
+                        .ifPresent(plan -> officerDisbursementPlans.put(application.getId(), plan));
+            }
+        }
+        model.addAttribute("officerDisbursementPlans", officerDisbursementPlans);
+        List<DisbursementMilestone> urgentComplianceMilestones = new ArrayList<>();
+        if (isDisburse) for (DisbursementPlan p : officerDisbursementPlans.values()) for (DisbursementMilestone m : p.getMilestones())
+            if (m.getStatus()==com.platform.disbursement.MilestoneStatus.COMPLIANCE_SUBMITTED && m.getComplianceOriginalFilename()!=null) urgentComplianceMilestones.add(m);
+        model.addAttribute("urgentComplianceMilestones", urgentComplianceMilestones);
+
         // Role-specific history: once an officer has completed their stage,
         // the application leaves that officer's active queue and appears here.
         List<SubsidyApplication> completedHistory = subsidyApplicationRepository.findAllByOrderByApplicationDateDesc()
@@ -228,9 +246,41 @@ public class WebController {
         if (user == null) return "redirect:/login?error=SessionExpired";
 
         model.addAttribute("user", user);
-        model.addAttribute("schemes", schemeService.getActiveSchemes());
+        List<Scheme> activeSchemes = schemeService.getActiveSchemes();
+        model.addAttribute("schemes", activeSchemes);
         List<SubsidyApplication> trackingLedger = subsidyApplicationRepository.findByUser(user);
         trackingLedger.forEach(this::enrichApplicationDocumentState);
+
+        // One citizen may have only one application record per scheme.
+        // REJECTED / officer re-verification continues on the SAME application.
+        // APPROVED permanently blocks another application. A third rejection blocks
+        // resubmission until the cooling period ends.
+        Map<Long, String> schemeApplicationState = new LinkedHashMap<>();
+        Map<Long, Long> schemeApplicationId = new LinkedHashMap<>();
+        for (Scheme scheme : activeSchemes) {
+            SubsidyApplication latest = subsidyApplicationRepository
+                    .findTopByUserAndSchemeOrderByApplicationDateDesc(user, scheme)
+                    .orElse(null);
+            if (latest == null) {
+                schemeApplicationState.put(scheme.getId(), "AVAILABLE");
+                continue;
+            }
+
+            schemeApplicationId.put(scheme.getId(), latest.getId());
+            if (latest.getApplicationStatus() == ApplicationStatus.APPROVED) {
+                schemeApplicationState.put(scheme.getId(), "APPROVED");
+            } else if (latest.isCoolingPeriodActive()) {
+                schemeApplicationState.put(scheme.getId(), "COOLING");
+            } else if (latest.getApplicationStatus() == ApplicationStatus.REJECTED
+                    || latest.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION
+                    || latest.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD) {
+                schemeApplicationState.put(scheme.getId(), "RESUBMIT");
+            } else {
+                schemeApplicationState.put(scheme.getId(), "ACTIVE");
+            }
+        }
+        model.addAttribute("schemeApplicationState", schemeApplicationState);
+        model.addAttribute("schemeApplicationId", schemeApplicationId);
 
         Map<Long, DisbursementPlan> disbursementPlans = new LinkedHashMap<>();
         for (SubsidyApplication application : trackingLedger) {
@@ -238,8 +288,12 @@ public class WebController {
                     .ifPresent(plan -> disbursementPlans.put(application.getId(), plan));
         }
 
+        List<DisbursementMilestone> citizenNotifications = new ArrayList<>();
+        for (DisbursementPlan p : disbursementPlans.values()) for (DisbursementMilestone m : p.getMilestones())
+            if (m.isComplianceRequested() && m.getStatus()!=com.platform.disbursement.MilestoneStatus.RELEASED && m.getComplianceOriginalFilename()==null) citizenNotifications.add(m);
         model.addAttribute("trackingLedger", trackingLedger);
         model.addAttribute("disbursementPlans", disbursementPlans);
+        model.addAttribute("citizenNotifications", citizenNotifications);
         return "dashboard-citizen";
     }
 
@@ -268,6 +322,18 @@ public class WebController {
         return "redirect:/dashboard/citizen?updated=true";
     }
 
+    /**
+     * Returns the latest application for this citizen and scheme.
+     * A scheme is not allowed to create a second application record:
+     * active/approved applications are blocked, while rejected/re-verification
+     * applications continue through the existing resubmission flow.
+     */
+    private SubsidyApplication latestApplicationFor(User user, Scheme scheme) {
+        return subsidyApplicationRepository
+                .findTopByUserAndSchemeOrderByApplicationDateDesc(user, scheme)
+                .orElse(null);
+    }
+
     // =========================================================
     // ELIGIBILITY / SCHEME SELECTION
     // =========================================================
@@ -288,17 +354,25 @@ public class WebController {
         User user = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
         if (user == null) return "redirect:/login?error=SessionExpired";
 
-        SubsidyApplication latest = subsidyApplicationRepository
-                .findTopByUserAndSchemeOrderByApplicationDateDesc(user, scheme)
-                .orElse(null);
-        if (latest != null && latest.isCoolingPeriodActive()) {
-            model.addAttribute("coolingEndDate", latest.getCoolingPeriodEndDate().toLocalDate());
-            model.addAttribute("scheme", scheme);
-            return "cooling-period";
-        }
-        if (latest != null && (latest.getApplicationStatus() == ApplicationStatus.REJECTED
-                || latest.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION)) {
-            return "redirect:/application/" + latest.getId() + "/resubmit";
+        SubsidyApplication latest = latestApplicationFor(user, scheme);
+        if (latest != null) {
+            if (latest.isCoolingPeriodActive()) {
+                model.addAttribute("coolingEndDate", latest.getCoolingPeriodEndDate().toLocalDate());
+                model.addAttribute("scheme", scheme);
+                return "cooling-period";
+            }
+            if (latest.getApplicationStatus() == ApplicationStatus.REJECTED
+                    || latest.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION
+                    || latest.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD) {
+                // REJECTED uses the same application for attempts 1/3, 2/3 and,
+                // after cooling expires, starts a fresh rejection cycle on that same ID.
+                return "redirect:/application/" + latest.getId() + "/resubmit";
+            }
+            if (latest.getApplicationStatus() == ApplicationStatus.APPROVED) {
+                return "redirect:/dashboard/citizen?schemeAlreadyApproved=true";
+            }
+            // Any other status is an application already moving through the workflow.
+            return "redirect:/dashboard/citizen?schemeApplicationActive=true";
         }
 
         Beneficiary target = new Beneficiary();
@@ -364,17 +438,22 @@ public class WebController {
 
         // A third rejection starts the one-month cooling period for this scheme.
         // Do not create another application while that cooling period is active.
-        SubsidyApplication latest = subsidyApplicationRepository
-                .findTopByUserAndSchemeOrderByApplicationDateDesc(registeredUser, scheme)
-                .orElse(null);
-        if (latest != null && latest.isCoolingPeriodActive()) {
-            model.addAttribute("coolingEndDate", latest.getCoolingPeriodEndDate().toLocalDate());
-            model.addAttribute("scheme", scheme);
-            return "cooling-period";
-        }
-        if (latest != null && (latest.getApplicationStatus() == ApplicationStatus.REJECTED
-                || latest.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION)) {
-            return "redirect:/application/" + latest.getId() + "/resubmit";
+        SubsidyApplication latest = latestApplicationFor(registeredUser, scheme);
+        if (latest != null) {
+            if (latest.isCoolingPeriodActive()) {
+                model.addAttribute("coolingEndDate", latest.getCoolingPeriodEndDate().toLocalDate());
+                model.addAttribute("scheme", scheme);
+                return "cooling-period";
+            }
+            if (latest.getApplicationStatus() == ApplicationStatus.REJECTED
+                    || latest.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION
+                    || latest.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD) {
+                return "redirect:/application/" + latest.getId() + "/resubmit";
+            }
+            if (latest.getApplicationStatus() == ApplicationStatus.APPROVED) {
+                return "redirect:/dashboard/citizen?schemeAlreadyApproved=true";
+            }
+            return "redirect:/dashboard/citizen?schemeApplicationActive=true";
         }
 
         Set<String> uploadedKeys = uploadedDocumentKeys(files);
@@ -399,7 +478,7 @@ public class WebController {
         application.setEligibilityStatus(true);
         application.setApplicationDate(LocalDateTime.now());
         application.setEligibilityScore(scoreResult.getTotalScore());
-        application.setSanctionAmount(scheme.getMaxIncomeThreshold() >= 500000.0 ? 100000.0 : 75000.0);
+        application.setSanctionAmount(0.0); // Not sanctioned until Finance Officer approves an amount.
         application.setApplicationStatus(ApplicationStatus.FIELD_VERIFICATION);
 
         // Save the application first so the generated ID can be used as the upload directory.
@@ -435,11 +514,9 @@ public class WebController {
             model.addAttribute("coolingEndDate", app.getCoolingPeriodEndDate().toLocalDate());
             return "cooling-period";
         }
-        if (app.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD) {
-            // Cooling has expired. The applicant starts a fresh application cycle
-            // for the same scheme instead of reopening the old rejected application.
-            return "redirect:/eligibility/" + app.getScheme().getId();
-        }
+        // If status is COOLING_PERIOD and isCoolingPeriodActive() is false,
+        // cooling has expired. Keep this SAME application ID and allow resubmission;
+        // markApplicantResubmitted() will reset the rejection cycle to 0/3.
         if (app.getApplicationStatus() != ApplicationStatus.APPLICANT_REVERIFICATION
                 && app.getApplicationStatus() != ApplicationStatus.COOLING_PERIOD
                 && app.getApplicationStatus() != ApplicationStatus.REJECTED) {
@@ -514,7 +591,8 @@ public class WebController {
         List<SubsidyApplication> applications = subsidyApplicationRepository.findByUser(currentUser);
         SubsidyApplication pending = applications.stream()
                 .filter(a -> a.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION
-                        || a.getApplicationStatus() == ApplicationStatus.REJECTED)
+                        || a.getApplicationStatus() == ApplicationStatus.REJECTED
+                        || (a.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD && !a.isCoolingPeriodActive()))
                 .findFirst()
                 .orElse(null);
 
@@ -539,7 +617,8 @@ public class WebController {
         List<SubsidyApplication> applications = subsidyApplicationRepository.findByUser(currentUser);
         SubsidyApplication pending = applications.stream()
                 .filter(a -> a.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION
-                        || a.getApplicationStatus() == ApplicationStatus.REJECTED)
+                        || a.getApplicationStatus() == ApplicationStatus.REJECTED
+                        || (a.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD && !a.isCoolingPeriodActive()))
                 .findFirst()
                 .orElse(null);
 
@@ -563,11 +642,7 @@ public class WebController {
             redirectAttributes.addFlashAttribute("error", "Cooling period is still active.");
             return "redirect:/dashboard/citizen";
         }
-        if (app.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD) {
-            redirectAttributes.addFlashAttribute("success",
-                    "Your cooling period has ended. You can start a new application for this scheme.");
-            return "redirect:/eligibility/" + app.getScheme().getId();
-        }
+        // Expired COOLING_PERIOD is allowed to continue on this same application.
 
         saveUploadedDocuments(app, app.getScheme(), files);
 
@@ -644,11 +719,7 @@ public class WebController {
             redirectAttributes.addFlashAttribute("error", "Cooling period is still active.");
             return "redirect:/dashboard/citizen";
         }
-        if (app.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD) {
-            redirectAttributes.addFlashAttribute("success",
-                    "Your cooling period has ended. You can start a new application for this scheme.");
-            return "redirect:/eligibility/" + app.getScheme().getId();
-        }
+        // Expired COOLING_PERIOD is allowed to continue on this same application.
         if (app.getApplicationStatus() != ApplicationStatus.APPLICANT_REVERIFICATION
                 && app.getApplicationStatus() != ApplicationStatus.COOLING_PERIOD
                 && app.getApplicationStatus() != ApplicationStatus.REJECTED) {
@@ -1551,6 +1622,25 @@ public class WebController {
         model.addAttribute("scheme", application.getScheme());
         model.addAttribute("applicationDocuments", application.getDocuments());
         model.addAttribute("applicationRemarks", application.getRemarks());
+
+        // Stable values used by application-details.html.
+        // Keeping these explicit prevents the page from showing SUB-null / N/A
+        // when a nested Thymeleaf expression is unavailable.
+        model.addAttribute("applicationId", application.getId());
+        model.addAttribute("applicantEmail",
+                application.getUser() != null && application.getUser().getEmail() != null
+                        ? application.getUser().getEmail() : "N/A");
+        model.addAttribute("appliedSchemeName",
+                application.getScheme() != null && application.getScheme().getSchemeName() != null
+                        ? application.getScheme().getSchemeName() : "N/A");
+        model.addAttribute("summaryApplicationDate", application.getApplicationDate());
+        model.addAttribute("summaryStatus", application.getApplicationStatus());
+        model.addAttribute("summaryEligibilityStatus", application.isEligibilityStatus());
+        model.addAttribute("summaryEligibilityScore", application.getEligibilityScore());
+        model.addAttribute("summaryResubmissionCount", application.getResubmissionCount());
+        model.addAttribute("summaryRejectionCount", application.getRejectionCount());
+        model.addAttribute("summarySanctionAmount", application.getSanctionAmount());
+        model.addAttribute("summaryUtrNumber", application.getUtrNumber());
     }
 
     private String successMessage(String action, String actor) {

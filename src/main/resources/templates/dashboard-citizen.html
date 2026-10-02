@@ -189,7 +189,9 @@
         .save-btn:hover { background: #0000B3; }
         .readonly-field { color: #94A3B8; font-size: 12px; margin-top: 2px; }
     </style>
-</head>
+    <style>
+        .notify-wrap{position:relative}.notify-btn{position:relative;border:1px solid #dbe3ef;background:#fff;color:#000080;border-radius:9px;padding:9px 12px;font-weight:900;cursor:pointer}.notify-count{position:absolute;right:-6px;top:-7px;min-width:18px;height:18px;border-radius:20px;background:#dc2626;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center}.notify-panel{display:none;position:absolute;right:0;top:45px;width:360px;max-height:430px;overflow:auto;background:#fff;border:1px solid #dbe3ef;border-radius:11px;box-shadow:0 16px 40px rgba(15,23,42,.18);z-index:3000;padding:10px}.notify-panel.open{display:block}.notify-item{margin-top:8px;padding:10px;border-radius:8px;background:#fff7ed;border-left:4px solid #f97316;font-size:10px;color:#7c2d12}.notify-item.urgent{background:#fef2f2;border-left-color:#dc2626;color:#991b1b}
+    </style></head>
 <body>
 
 <header class="site-header">
@@ -198,6 +200,7 @@
         <p>Government of India &mdash; Citizen Services Desk</p>
     </div>
     <div class="nav-right">
+        <div class="notify-wrap"><button type="button" class="notify-btn" onclick="toggleCitizenNotifications()">🔔 Notifications<span class="notify-count" th:if="${citizenNotifications != null and !#lists.isEmpty(citizenNotifications)}" th:text="${#lists.size(citizenNotifications)}">0</span></button><div id="citizenNotifyPanel" class="notify-panel"><strong>Citizen Notifications</strong><div th:if="${citizenNotifications == null or #lists.isEmpty(citizenNotifications)}" style="padding:12px;font-size:10px;color:#64748b;">No pending notifications.</div><div th:each="n : ${citizenNotifications}" th:class="${n.lastReminderType == 'OVERDUE' or n.lastReminderType == 'DUE_30_MIN' ? 'notify-item urgent' : 'notify-item'}"><strong th:text="${n.lastReminderType == 'OVERDUE' ? '⚠ OVERDUE' : (n.lastReminderType == 'DUE_30_MIN' ? '🔴 Due within 30 minutes' : (n.lastReminderType == 'DUE_SOON' ? '⏰ Compliance reminder' : '📨 Document requested'))}">Notification</strong><br><span th:text="${'SUB-' + n.plan.application.id + ' · ' + n.milestoneName}">Milestone</span><br><span th:text="${n.complianceRequestRemarks != null and !#strings.isEmpty(n.complianceRequestRemarks) ? n.complianceRequestRemarks : n.complianceRequirement}">Request</span><br><span th:text="${'Due: ' + #temporals.format(n.dueDate,'dd MMM yyyy') + ' ' + #temporals.format(n.dueTime,'hh:mm a')}">Due</span></div></div></div>
         <div class="profile-trigger" id="profileTrigger"
              th:attr="title=${user?.beneficiary?.fullName ?: user?.email}">
             <span th:text="${user?.beneficiary?.fullName != null
@@ -370,7 +373,28 @@
             </div>
 
             <div class="scheme-card-footer">
-                <a th:href="@{'/eligibility/' + ${sch.id}}" class="apply-btn">Apply &amp; Check Eligibility →</a>
+                <a th:if="${schemeApplicationState[sch.id] == 'AVAILABLE'}"
+                   th:href="@{'/eligibility/' + ${sch.id}}" class="apply-btn">Apply &amp; Check Eligibility →</a>
+
+                <a th:if="${schemeApplicationState[sch.id] == 'RESUBMIT'}"
+                   th:href="@{'/application/' + ${schemeApplicationId[sch.id]} + '/resubmit'}"
+                   class="apply-btn">Continue / Re-apply Same Application →</a>
+
+                <span th:if="${schemeApplicationState[sch.id] == 'ACTIVE'}"
+                      class="apply-btn" style="display:block;text-align:center;background:#64748b;cursor:not-allowed;">
+                    Application Already In Progress
+                </span>
+
+                <span th:if="${schemeApplicationState[sch.id] == 'APPROVED'}"
+                      class="apply-btn" style="display:block;text-align:center;background:#15803d;cursor:not-allowed;">
+                    Already Approved — Re-application Not Allowed
+                </span>
+
+                <span th:if="${schemeApplicationState[sch.id] == 'COOLING'}"
+                      class="apply-btn" style="display:block;text-align:center;background:#b45309;cursor:not-allowed;">
+                    Cooling Period Active
+                </span>
+
                 <a th:href="@{'/scheme/' + ${sch.id} + '/detail'}" class="detail-link">View Full Details &amp; Required Documents</a>
             </div>
         </div>
@@ -537,5 +561,5 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeEditModal(); });
 </script>
 
-</body>
+<script>function toggleCitizenNotifications(){document.getElementById('citizenNotifyPanel').classList.toggle('open');}document.addEventListener('click',e=>{const p=document.getElementById('citizenNotifyPanel');if(p&&!e.target.closest('.notify-wrap'))p.classList.remove('open');});</script></body>
 </html>

@@ -259,6 +259,15 @@ public class DisbursementPlanService {
         milestone.setComplianceRequestedAt(LocalDateTime.now());
         milestone.getPlan().setUpdatedAt(LocalDateTime.now());
         planRepository.save(milestone.getPlan());
+        if (!reminderRepository.existsByMilestoneIdAndReminderType(milestone.getId(), ReminderType.REQUESTED)) {
+            ComplianceReminder r = new ComplianceReminder();
+            r.setMilestone(milestone); r.setReminderType(ReminderType.REQUESTED); r.setSentAt(LocalDateTime.now());
+            r.setMessage("Finance requested a compliance document for " + milestone.getMilestoneName()
+                    + ". Due " + milestone.getDueDate() + " at " + (milestone.getDueTime()==null?LocalTime.of(10,0):milestone.getDueTime()) + ".");
+            reminderRepository.save(r);
+            milestone.setLastReminderAt(r.getSentAt()); milestone.setLastReminderType(ReminderType.REQUESTED.name());
+            planRepository.save(milestone.getPlan());
+        }
         String note = nonBlank(remarks, "Finance Officer requested the applicant's compliance document.");
         addAuditRemark(milestone.getPlan().getApplication(), "FUND_DISBURSEMENT", "FINANCE_APPROVER", "COMPLIANCE_REQUESTED", note);
         auditLogService.record("DISBURSEMENT_MILESTONE", milestone.getId(), "COMPLIANCE_REQUESTED",
@@ -426,99 +435,67 @@ public class DisbursementPlanService {
                 .orElseThrow(() -> new IllegalArgumentException("Milestone not found: " + id));
     }
 
-    /**
-     * Runs every day at 09:00 server time. It records one due-soon and one overdue
-     * reminder per milestone and updates overdue milestone status without creating duplicates.
-     */
-    @Scheduled(cron = "0 * * * * *")
+    /** Automatic compliance reminder engine. */
+    @Scheduled(cron = "0 */30 * * * *")
     @Transactional
-    public void automateComplianceReminders() {
-        processComplianceReminders();
-    }
+    public void automateComplianceReminders() { processComplianceReminders(); }
 
     @Transactional
-    public int runComplianceReminderCheck() {
-        return processComplianceReminders();
-    }
+    public int runComplianceReminderCheck() { return processComplianceReminders(); }
 
     @Transactional
     protected int processComplianceReminders() {
-        LocalDate today = LocalDate.now();
-        int remindersCreated = 0;
+        LocalDateTime now=LocalDateTime.now(); LocalDate today=now.toLocalDate(); int created=0;
+        for (DisbursementPlan plan:planRepository.findAll()) {
+            boolean changed=false;
+            for (DisbursementMilestone m:plan.getMilestones()) {
+                if (m.getStatus()==MilestoneStatus.RELEASED || m.getDueDate()==null) continue;
+                LocalDateTime due=LocalDateTime.of(m.getDueDate(),m.getDueTime()==null?LocalTime.of(10,0):m.getDueTime());
 
-        for (DisbursementPlan plan : planRepository.findAll()) {
-            boolean planChanged = false;
-            for (DisbursementMilestone milestone : plan.getMilestones()) {
-                if (milestone.getStatus() == MilestoneStatus.RELEASED
-                        || milestone.getDueDate() == null) {
-                    continue;
-                }
-
-                // If the applicant submitted early and Finance already verified the
-                // compliance, release automatically when the configured due date arrives.
-                LocalDateTime scheduledReleaseAt = LocalDateTime.of(
-                        milestone.getDueDate(),
-                        milestone.getDueTime() == null ? LocalTime.of(10, 0) : milestone.getDueTime());
-                if (milestone.getStatus() == MilestoneStatus.COMPLIANCE_VERIFIED
-                        && !LocalDateTime.now().isBefore(scheduledReleaseAt)) {
+                if (m.getStatus()==MilestoneStatus.COMPLIANCE_VERIFIED && !now.isBefore(due)) {
                     try {
-                        String autoReference = "AUTO-SUB-"
-                                + plan.getApplication().getId() + "-M" + milestone.getSequenceNo()
-                                + "-" + today.toString().replace("-", "");
-                        releaseMilestone(milestone.getId(), autoReference,
+                        releaseMilestone(m.getId(),"AUTO-SUB-"+plan.getApplication().getId()+"-M"+m.getSequenceNo()+"-"+today.toString().replace("-",""),
                                 "Automatically released on the scheduled due date after compliance verification.");
                         continue;
-                    } catch (RuntimeException ignored) {
-                        // A previous-stage dependency can legitimately delay automatic release.
+                    } catch(RuntimeException ignored) {}
+                }
+
+                boolean submitted=m.getComplianceOriginalFilename()!=null
+                        || m.getStatus()==MilestoneStatus.COMPLIANCE_SUBMITTED
+                        || m.getStatus()==MilestoneStatus.COMPLIANCE_VERIFIED;
+                if (!m.isComplianceRequested() || submitted) continue;
+
+                ReminderType type=null; String msg=null;
+                if (now.getHour()==9 && !today.isAfter(m.getDueDate()) && !today.isBefore(m.getDueDate().minusDays(3))) {
+                    LocalDateTime from=today.atStartOfDay(), to=from.plusDays(1).minusNanos(1);
+                    if (!reminderRepository.existsByMilestoneIdAndReminderTypeAndSentAtBetween(m.getId(),ReminderType.DUE_SOON,from,to)) {
+                        type=ReminderType.DUE_SOON;
+                        msg="Reminder: requested compliance document for "+m.getMilestoneName()+" is due on "+m.getDueDate()+" at "+(m.getDueTime()==null?LocalTime.of(10,0):m.getDueTime())+".";
                     }
                 }
-
-                ReminderType type = null;
-                if (!today.isAfter(milestone.getDueDate())
-                        && !today.isBefore(milestone.getDueDate().minusDays(3))) {
-                    type = ReminderType.DUE_SOON;
-                } else if (today.isAfter(milestone.getDueDate())) {
-                    type = ReminderType.OVERDUE;
-                    if (milestone.getStatus() != MilestoneStatus.COMPLIANCE_SUBMITTED
-                            && milestone.getStatus() != MilestoneStatus.COMPLIANCE_VERIFIED) {
-                        milestone.setStatus(MilestoneStatus.OVERDUE);
-                        planChanged = true;
-                    }
+                if (type==null && !now.isBefore(due.minusMinutes(30)) && now.isBefore(due)
+                        && !reminderRepository.existsByMilestoneIdAndReminderType(m.getId(),ReminderType.DUE_30_MIN)) {
+                    type=ReminderType.DUE_30_MIN; msg="Urgent reminder: requested compliance document for "+m.getMilestoneName()+" is due within 30 minutes.";
                 }
-
-                if (type != null
-                        && !reminderRepository.existsByMilestoneIdAndReminderType(milestone.getId(), type)) {
-                    ComplianceReminder reminder = new ComplianceReminder();
-                    reminder.setMilestone(milestone);
-                    reminder.setReminderType(type);
-                    reminder.setSentAt(LocalDateTime.now());
-                    reminder.setMessage(type == ReminderType.OVERDUE
-                            ? "Compliance milestone is overdue and requires immediate attention."
-                            : "Compliance milestone is due within the next three days.");
-                    reminderRepository.save(reminder);
-                    remindersCreated++;
-
-                    milestone.setLastReminderAt(LocalDateTime.now());
-                    milestone.setLastReminderType(type.name());
-                    planChanged = true;
-
-                    addAuditRemark(plan.getApplication(), "FUND_DISBURSEMENT",
-                            "SYSTEM", type == ReminderType.OVERDUE ? "COMPLIANCE_OVERDUE" : "COMPLIANCE_REMINDER",
-                            reminder.getMessage());
-                    auditLogService.recordAs("SYSTEM", "SYSTEM", "DISBURSEMENT_MILESTONE", milestone.getId(),
-                            type == ReminderType.OVERDUE ? "COMPLIANCE_OVERDUE" : "COMPLIANCE_REMINDER",
-                            null, type.name(), reminder.getMessage());
+                if (type==null && now.isAfter(due) && !reminderRepository.existsByMilestoneIdAndReminderType(m.getId(),ReminderType.OVERDUE)) {
+                    type=ReminderType.OVERDUE; msg="Requested compliance document for "+m.getMilestoneName()+" is overdue and requires immediate attention.";
+                    if (m.getStatus()!=MilestoneStatus.COMPLIANCE_SUBMITTED && m.getStatus()!=MilestoneStatus.COMPLIANCE_VERIFIED) { m.setStatus(MilestoneStatus.OVERDUE); changed=true; }
+                }
+                if (type!=null) {
+                    ComplianceReminder r=new ComplianceReminder(); r.setMilestone(m); r.setReminderType(type); r.setSentAt(now); r.setMessage(msg); reminderRepository.save(r); created++;
+                    m.setLastReminderAt(now); m.setLastReminderType(type.name()); changed=true;
+                    addAuditRemark(plan.getApplication(),"FUND_DISBURSEMENT","SYSTEM",type==ReminderType.OVERDUE?"COMPLIANCE_OVERDUE":"COMPLIANCE_REMINDER",msg);
+                    auditLogService.recordAs("SYSTEM","SYSTEM","DISBURSEMENT_MILESTONE",m.getId(),type==ReminderType.OVERDUE?"COMPLIANCE_OVERDUE":"COMPLIANCE_REMINDER",null,type.name(),msg);
                 }
             }
-
-            if (planChanged) {
-                refreshPlanStatus(plan);
-                plan.setUpdatedAt(LocalDateTime.now());
-                planRepository.save(plan);
-            }
+            if (changed) { refreshPlanStatus(plan); plan.setUpdatedAt(LocalDateTime.now()); planRepository.save(plan); }
         }
+        return created;
+    }
 
-        return remindersCreated;
+    @Transactional(readOnly = true)
+    public List<ComplianceReminder> getReminderHistoryForPlan(Long planId) {
+        return reminderRepository.findByMilestonePlanIdOrderBySentAtDesc(planId);
     }
 
     private void ensurePlanActive(DisbursementPlan plan) {

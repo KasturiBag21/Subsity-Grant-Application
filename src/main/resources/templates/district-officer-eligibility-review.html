@@ -15,12 +15,35 @@
         @media(max-width:700px){.score-layout{grid-template-columns:1fr}}
 
         @media(max-width:800px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.docs{grid-template-columns:1fr}}
+
+        .district-fixed-header{position:sticky;top:0;z-index:1000;background:#fff;border-top:3px solid #ff9933;border-bottom:1px solid #dbe3ef;box-shadow:0 2px 9px rgba(15,23,42,.06);min-height:104px;padding:12px 42px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+        .district-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+        .district-emblem{width:58px;height:58px}.district-emblem svg{width:100%;height:100%;display:block}
+        .district-brand-text h1{margin:0;color:#000080;font-size:29px;line-height:1}.district-brand-text h1 span{color:#e67e22}
+        .district-brand-text p{margin:4px 0 0;color:#536b96;font-size:9px;font-weight:800;letter-spacing:.13em}
+        .district-brand-text strong{display:block;margin-top:6px;color:#082d72;font-size:11px}
+        .district-back-header{display:inline-flex;align-items:center;padding:10px 14px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#000080;text-decoration:none;font-size:12px;font-weight:900}
+        .district-back-header:hover{background:#eef4ff}
+        @media(max-width:700px){.district-fixed-header{padding:10px 16px;align-items:flex-start}.district-brand-text p{display:none}.district-back-header{font-size:10px;padding:8px 9px}}
+
     </style>
 </head>
 <body>
-<div class="universal-header"><a href="/dashboard/officer" class="brand-block"><div class="brand-text"><h1>SAGAR<span>.</span></h1><p>District Officer Detailed Review</p></div></a></div>
+<header class="district-fixed-header">
+    <a th:href="@{/dashboard/officer#district-queue}" class="district-brand">
+        <div class="district-emblem">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="10.5" stroke="#000080" stroke-width="1.6" fill="#fff"/>
+                <path d="M6.5 14.5V10.2L12 6l5.5 4.2v4.3" stroke="#000080" stroke-width="1.5"/>
+                <path d="M5.5 17.5c4.3 2.5 8.7 2.5 13 0" stroke="#138808" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M12 2.2v3" stroke="#ff9933" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="district-brand-text"><h1>SAGAR<span>.</span></h1><p>SUBSIDY &amp; GRANT ADMINISTRATION</p><strong>District Review Officer</strong></div>
+    </a>
+    <a class="district-back-header" th:href="@{/dashboard/officer#district-queue}">← Back to District Queue</a>
+</header>
 <main class="page">
-    <a class="back" href="/dashboard/officer">← Back to District Queue</a>
     <div class="flash ok" th:if="${success}" th:text="${success}">Success</div>
     <div class="flash bad" th:if="${error}" th:text="${error}">Error</div>
     <section class="hero">

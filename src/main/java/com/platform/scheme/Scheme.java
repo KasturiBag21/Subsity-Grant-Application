@@ -31,6 +31,10 @@ public class Scheme {
     private double totalRegionalBudget;
     private double remainingBudget;
 
+    // Maximum amount Finance may sanction to one application under this scheme.
+    // This is a scheme rule, not an officer-entered arbitrary limit.
+    private double maxSanctionAmount;
+
     // ── Scheme-specific eligibility criteria ──
     private String requiredOccupation;     // Comma-separated accepted values
     private String requiredGender;
@@ -78,6 +82,9 @@ public class Scheme {
 
     public double getRemainingBudget() { return remainingBudget; }
     public void setRemainingBudget(double remainingBudget) { this.remainingBudget = remainingBudget; }
+
+    public double getMaxSanctionAmount() { return maxSanctionAmount; }
+    public void setMaxSanctionAmount(double maxSanctionAmount) { this.maxSanctionAmount = maxSanctionAmount; }
 
     public String getRequiredOccupation() { return requiredOccupation; }
     public void setRequiredOccupation(String requiredOccupation) { this.requiredOccupation = requiredOccupation; }

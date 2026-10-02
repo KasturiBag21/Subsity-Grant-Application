@@ -29,7 +29,7 @@ public class SchemeDataLoader {
                     "A central government scheme providing financial assistance to meritorious students from economically weaker sections enrolled in recognized institutions. The grant covers tuition fees, books, and educational materials.",
                     "Up to ₹50,000 per academic year — direct bank transfer",
                     "Students aged 18–30 from low-income families (Annual income ≤ ₹5,00,000)",
-                    18, 30, 500000.0, 5000000.0,
+                    18, 30, 500000.0, 5000000.0, 50000.0,
                     "Student", null, false, null,
                     "Aadhaar Card,Bank Passbook,Student ID / Admission Proof,Income Certificate",
                     "Previous Year Marksheet,College Fee Receipt,Scholarship Certificate");
@@ -38,7 +38,7 @@ public class SchemeDataLoader {
                     "Financial support for small and marginal farmers to purchase seeds, fertilizers, and agricultural equipment. The grant helps improve crop yield and income stability for rural farming families.",
                     "Up to ₹1,00,000 per harvest season — direct bank transfer",
                     "Farmers and agriculturists aged 18–65 with annual household income ≤ ₹4,00,000",
-                    18, 65, 400000.0, 8000000.0,
+                    18, 65, 400000.0, 8000000.0, 100000.0,
                     "Farmer,Agriculturist", null, false, null,
                     "Aadhaar Card,Bank Passbook,Land Ownership Document,Kisan Credit Card",
                     "Soil Health Card,Crop Insurance Certificate,PM-KISAN Registration Proof");
@@ -47,7 +47,7 @@ public class SchemeDataLoader {
                     "Provides a one-time grant for construction or renovation of pucca housing for eligible families who currently live in kutcha or semi-pucca structures. Applicable to families without ownership of a pucca house.",
                     "Up to ₹2,00,000 for construction · ₹1,00,000 for renovation",
                     "Adults 21–70 with annual income ≤ ₹3,00,000 who do not own a pucca house",
-                    21, 70, 300000.0, 12000000.0,
+                    21, 70, 300000.0, 12000000.0, 200000.0,
                     null, null, false, null,
                     "Aadhaar Card,Bank Passbook,Income Certificate,Residence Proof,Property Documents",
                     "Photograph of existing dwelling,No-objection certificate from local body");
@@ -56,7 +56,7 @@ public class SchemeDataLoader {
                     "Supports women entrepreneurs in establishing or expanding their small businesses. The grant covers startup costs, equipment purchase, working capital, and skill development training. Previous government loans must not be in default.",
                     "Up to ₹5,00,000 — phased disbursement based on business milestones",
                     "Women aged 18–55, self-employed or entrepreneur, with annual income ≤ ₹8,00,000",
-                    18, 55, 800000.0, 6000000.0,
+                    18, 55, 800000.0, 6000000.0, 500000.0,
                     null, "Female", false, null,
                     "Aadhaar Card,Bank Passbook,Business Registration Certificate,Business Plan",
                     "GST Registration,Trade License,Previous Business Turnover Statement");
@@ -65,7 +65,7 @@ public class SchemeDataLoader {
                     "Monthly pension support and medical reimbursement for senior citizens aged 60 and above who are retired or not employed and have limited income. The scheme also provides access to healthcare and rehabilitation services.",
                     "₹2,000–₹5,000/month + medical reimbursement up to ₹25,000/year",
                     "Senior citizens aged 60+ with annual income ≤ ₹3,00,000, retired or unemployed",
-                    60, 100, 300000.0, 4000000.0,
+                    60, 100, 300000.0, 4000000.0, 25000.0,
                     null, null, false, null,
                     "Aadhaar Card,Bank Passbook,Age Proof,Income Certificate,Residence Proof",
                     "Medical Records,Pension Statement,Disability Certificate (if applicable)");
@@ -74,7 +74,7 @@ public class SchemeDataLoader {
                     "Comprehensive support for persons with disabilities (PwD) including financial assistance for assistive devices, rehabilitation, vocational training, and monthly living allowance. Applicant must hold a valid disability certificate with ≥40% disability.",
                     "Up to ₹1,50,000 for assistive devices + ₹1,500/month living allowance",
                     "Persons with Disabilities aged 18–80 with annual income ≤ ₹3,50,000",
-                    18, 80, 350000.0, 3500000.0,
+                    18, 80, 350000.0, 3500000.0, 150000.0,
                     null, null, true, null,
                     "Aadhaar Card,Bank Passbook,Disability Certificate (UDID),Income Certificate",
                     "Medical Prescription for Assistive Device,Vocational Training Certificate");
@@ -83,7 +83,7 @@ public class SchemeDataLoader {
                     "Skill development and vocational training support for rural youth to improve their employability and income. Covers training fees, certification costs, and a stipend during the training period.",
                     "Up to ₹75,000 for training + ₹500/month stipend during training",
                     "Rural youth aged 18–45 with annual income ≤ ₹4,50,000",
-                    18, 45, 450000.0, 7000000.0,
+                    18, 45, 450000.0, 7000000.0, 75000.0,
                     null, null, false, "Rural",
                     "Aadhaar Card,Bank Passbook,Residence Proof (Rural),Income Certificate",
                     "Skill Assessment Certificate,Enrolment Letter from Training Institute");
@@ -102,7 +102,7 @@ public class SchemeDataLoader {
 
     private void upsertScheme(SchemeRepository repo, String name, String emoji,
                               String description, String benefitSummary, String targetBeneficiary,
-                              int ageMin, int ageMax, double maxIncome, double totalBudget,
+                              int ageMin, int ageMax, double maxIncome, double totalBudget, double maxSanctionAmount,
                               String requiredOccupation, String requiredGender,
                               boolean requiresDisability, String requiredResidenceType,
                               String requiredDocuments, String optionalDocuments) {
@@ -111,6 +111,11 @@ public class SchemeDataLoader {
             // Do not overwrite administrator-managed scheme configuration on every startup.
             // The loader is now seed-only for existing schemes.
             Scheme scheme = existing.get();
+            // Backfill the new per-application sanction ceiling for existing databases.
+            if (scheme.getMaxSanctionAmount() <= 0 && maxSanctionAmount > 0) {
+                scheme.setMaxSanctionAmount(maxSanctionAmount);
+                repo.save(scheme);
+            }
             if (scheme.getRemainingBudget() <= 0 && scheme.getTotalRegionalBudget() > 0) {
                 // Legacy databases created before remainingBudget was populated.
                 // Do not resurrect an actually-used budget when applications already exist.
@@ -133,6 +138,7 @@ public class SchemeDataLoader {
         scheme.setEligibleAgeMax(ageMax);
         scheme.setMaxIncomeThreshold(maxIncome);
         scheme.setTotalRegionalBudget(totalBudget);
+        scheme.setMaxSanctionAmount(maxSanctionAmount);
         scheme.setRequiredOccupation(requiredOccupation);
         scheme.setRequiredGender(requiredGender);
         scheme.setRequiresDisability(requiresDisability);

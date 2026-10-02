@@ -68,6 +68,7 @@ public class Milestone3Controller {
             model.addAttribute("paymentBankVerified", app.isPaymentBankDetailsVerified());
             model.addAttribute("maskedAccount", account == null || account.length() < 4 ? "Not verified" : "XXXXXX" + account.substring(account.length()-4));
             model.addAttribute("plan", plan);
+            model.addAttribute("reminderHistory", planService.getReminderHistoryForPlan(plan.getId()));
             model.addAttribute("planForm", toForm(plan));
             model.addAttribute("today", LocalDate.now());
             return "milestone3-disbursement";
