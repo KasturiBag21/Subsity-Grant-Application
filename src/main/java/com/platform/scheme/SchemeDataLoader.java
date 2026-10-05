@@ -111,6 +111,25 @@ public class SchemeDataLoader {
             // Do not overwrite administrator-managed scheme configuration on every startup.
             // The loader is now seed-only for existing schemes.
             Scheme scheme = existing.get();
+            boolean changed = false;
+
+            // Backfill ONLY missing document rules in older/local databases.
+            // Existing configured values are never overwritten.
+            if ((scheme.getRequiredDocuments() == null || scheme.getRequiredDocuments().isBlank())
+                    && requiredDocuments != null && !requiredDocuments.isBlank()) {
+                scheme.setRequiredDocuments(requiredDocuments);
+                changed = true;
+            }
+            if ((scheme.getOptionalDocuments() == null || scheme.getOptionalDocuments().isBlank())
+                    && optionalDocuments != null && !optionalDocuments.isBlank()) {
+                scheme.setOptionalDocuments(optionalDocuments);
+                changed = true;
+            }
+
+            if (changed) {
+                repo.save(scheme);
+            }
+
             // Backfill the new per-application sanction ceiling for existing databases.
             if (scheme.getMaxSanctionAmount() <= 0 && maxSanctionAmount > 0) {
                 scheme.setMaxSanctionAmount(maxSanctionAmount);
