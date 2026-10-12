@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+    boolean existsByUsernameIgnoreCase(String username);
 
     // Verifies the field match across your OneToOne mapping layer
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.beneficiary.governmentId = :govId")

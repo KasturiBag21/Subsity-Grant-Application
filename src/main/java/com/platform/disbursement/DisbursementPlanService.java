@@ -219,6 +219,9 @@ public class DisbursementPlanService {
         if (plan.getStatus() == DisbursementPlanStatus.COMPLETED) {
             throw new IllegalStateException("A completed disbursement plan cannot be placed on hold.");
         }
+        if (plan.getStatus() == DisbursementPlanStatus.ON_HOLD) {
+            throw new IllegalStateException("This disbursement plan is already on hold.");
+        }
         plan.setStatus(DisbursementPlanStatus.ON_HOLD);
         plan.setUpdatedAt(LocalDateTime.now());
         planRepository.save(plan);
@@ -289,6 +292,12 @@ public class DisbursementPlanService {
         if (milestone.getStatus() == MilestoneStatus.RELEASED) {
             throw new IllegalStateException("This milestone has already been released.");
         }
+        if (milestone.getStatus() == MilestoneStatus.COMPLIANCE_SUBMITTED) {
+            throw new IllegalStateException("Compliance has already been submitted and is awaiting verification.");
+        }
+        if (milestone.getStatus() == MilestoneStatus.COMPLIANCE_VERIFIED) {
+            throw new IllegalStateException("Compliance has already been verified for this milestone.");
+        }
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Please select a compliance document to upload.");
         }
@@ -326,6 +335,12 @@ public class DisbursementPlanService {
         DisbursementMilestone milestone = getMilestone(milestoneId);
         if (milestone.getStatus() == MilestoneStatus.RELEASED) {
             throw new IllegalStateException("This milestone has already been released.");
+        }
+        if (milestone.getStatus() == MilestoneStatus.COMPLIANCE_SUBMITTED) {
+            throw new IllegalStateException("Compliance has already been submitted and is awaiting verification.");
+        }
+        if (milestone.getStatus() == MilestoneStatus.COMPLIANCE_VERIFIED) {
+            throw new IllegalStateException("Verified compliance cannot be submitted again.");
         }
 
         ensurePlanActive(milestone.getPlan());
@@ -436,7 +451,7 @@ public class DisbursementPlanService {
     }
 
     /** Automatic compliance reminder engine. */
-    @Scheduled(cron = "0 */30 * * * *")
+    @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void automateComplianceReminders() { processComplianceReminders(); }
 
@@ -448,7 +463,9 @@ public class DisbursementPlanService {
         LocalDateTime now=LocalDateTime.now(); LocalDate today=now.toLocalDate(); int created=0;
         for (DisbursementPlan plan:planRepository.findAll()) {
             boolean changed=false;
-            for (DisbursementMilestone m:plan.getMilestones()) {
+            // Iterate over a defensive snapshot. releaseMilestone(...) can change the
+            // Hibernate-managed milestone collection while this reminder scan is running.
+            for (DisbursementMilestone m : new ArrayList<>(plan.getMilestones())) {
                 if (m.getStatus()==MilestoneStatus.RELEASED || m.getDueDate()==null) continue;
                 LocalDateTime due=LocalDateTime.of(m.getDueDate(),m.getDueTime()==null?LocalTime.of(10,0):m.getDueTime());
 

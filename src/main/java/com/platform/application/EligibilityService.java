@@ -1,6 +1,7 @@
 package com.platform.application;
 
 import com.platform.scheme.Scheme;
+import com.platform.audit.AuditLogService;
 import com.platform.scheme.SchemeRepository;
 import com.platform.user.Beneficiary;
 import com.platform.util.DocumentKeyUtil;
@@ -25,6 +26,7 @@ public class EligibilityService {
     @Autowired private SubsidyApplicationRepository applicationRepository;
     @Autowired private ApplicationRemarkRepository remarkRepository;
     @Autowired private ApplicationDocumentRepository documentRepository;
+    @Autowired private AuditLogService auditLogService;
 
     /**
      * Calculates exactly the same score used by the live browser preview.
@@ -218,6 +220,7 @@ public class EligibilityService {
                 && app.getApplicationStatus() != ApplicationStatus.RESUBMITTED) {
             throw new IllegalStateException("Application is not in Field Verification stage.");
         }
+        String previousStatus = app.getApplicationStatus().name();
         String note = normalizeRemark(remarks, action, "Field Officer");
         app.setFieldInspectionRemarks(note);
         switch (normalizeAction(action)) {
@@ -228,6 +231,9 @@ public class EligibilityService {
         }
         applicationRepository.save(app);
         addRemark(app, "FIELD_VERIFICATION", "FIELD_OFFICER", action, note);
+        auditLogService.record("SUBSIDY_APPLICATION", app.getId(),
+                "FIELD_" + normalizeAction(action), previousStatus,
+                app.getApplicationStatus().name(), note);
     }
 
     public void districtOfficerAction(Long appId, String action, String remarks) {
@@ -235,6 +241,7 @@ public class EligibilityService {
         if (app.getApplicationStatus() != ApplicationStatus.DISTRICT_REVIEW) {
             throw new IllegalStateException("Application is not in District Review stage.");
         }
+        String previousStatus = app.getApplicationStatus().name();
         String note = normalizeRemark(remarks, action, "District Officer");
         app.setDistrictReviewRemarks(note);
         switch (normalizeAction(action)) {
@@ -247,6 +254,9 @@ public class EligibilityService {
         }
         applicationRepository.save(app);
         addRemark(app, "DISTRICT_REVIEW", "DISTRICT_OFFICER", action, note);
+        auditLogService.record("SUBSIDY_APPLICATION", app.getId(),
+                "DISTRICT_" + normalizeAction(action), previousStatus,
+                app.getApplicationStatus().name(), note);
     }
 
     public void financeApproverAction(Long appId, String action, String remarks, double sanctionAmount) {
@@ -254,6 +264,7 @@ public class EligibilityService {
         if (app.getApplicationStatus() != ApplicationStatus.FINANCE_PENDING) {
             throw new IllegalStateException("Application is not in Finance Pending stage.");
         }
+        String previousStatus = app.getApplicationStatus().name();
         String note = normalizeRemark(remarks, action, "Finance Approver");
         app.setFinanceApprovalRemarks(note);
         switch (normalizeAction(action)) {
@@ -290,6 +301,13 @@ public class EligibilityService {
         }
         applicationRepository.save(app);
         addRemark(app, "FINANCE_PENDING", "FINANCE_APPROVER", action, note);
+        String financeNewValue = app.getApplicationStatus().name();
+        if ("APPROVE".equals(normalizeAction(action))) {
+            financeNewValue += " | sanctionAmount=" + String.format("%.2f", app.getSanctionAmount());
+        }
+        auditLogService.record("SUBSIDY_APPLICATION", app.getId(),
+                "FINANCE_" + normalizeAction(action), previousStatus,
+                financeNewValue, note);
     }
 
     public void fundDisbursementAction(Long appId, String action, String utrNumber, String remarks) {
@@ -297,6 +315,7 @@ public class EligibilityService {
         if (app.getApplicationStatus() != ApplicationStatus.FUND_DISBURSEMENT) {
             throw new IllegalStateException("Application is not in Fund Disbursement stage.");
         }
+        String previousStatus = app.getApplicationStatus().name();
         String note = normalizeRemark(remarks, action, "Disbursement Officer");
         app.setDisbursementRemarks(note);
         switch (normalizeAction(action)) {
@@ -320,10 +339,15 @@ public class EligibilityService {
         }
         applicationRepository.save(app);
         addRemark(app, "FUND_DISBURSEMENT", "DISBURSEMENT_OFFICER", action, note);
+        auditLogService.record("SUBSIDY_APPLICATION", app.getId(),
+                "DISBURSEMENT_" + normalizeAction(action), previousStatus,
+                app.getApplicationStatus().name(), note);
     }
 
     /** Citizen has supplied the requested documents and sends the application back into Field Verification. */
     public void markApplicantResubmitted(SubsidyApplication app) {
+        String previousStatus = app.getApplicationStatus() == null
+                ? null : app.getApplicationStatus().name();
         // After the third rejection the same application waits through cooling.
         // Once cooling has expired, resubmitting starts a new 0/3 rejection cycle
         // without creating a second application record for the same scheme.
@@ -336,8 +360,11 @@ public class EligibilityService {
         app.setResubmissionCount(app.getResubmissionCount() + 1);
         app.setCoolingPeriodEndDate(null);
         applicationRepository.save(app);
-        addRemark(app, "APPLICANT", "BENEFICIARY", "RESUBMITTED",
-                "Applicant continued/resubmitted the same application for verification.");
+        String note = "Applicant continued/resubmitted the same application for verification.";
+        addRemark(app, "APPLICANT", "BENEFICIARY", "RESUBMITTED", note);
+        auditLogService.record("SUBSIDY_APPLICATION", app.getId(),
+                "APPLICATION_RESUBMITTED", previousStatus,
+                app.getApplicationStatus().name(), note);
     }
 
     /**
@@ -395,6 +422,7 @@ public class EligibilityService {
         ApplicationDocument document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
         SubsidyApplication app = document.getApplication();
+        String previousDocumentStatus = document.getVerificationStatus();
         String normalized = normalizeAction(action);
         String note = normalizeRemark(remarks, action, actorRole);
         switch (normalized) {
@@ -404,6 +432,14 @@ public class EligibilityService {
                 document.setVerifiedAt(LocalDateTime.now());
                 document.setVerifiedBy(actorRole);
             }
+
+            case "RESUBMIT" -> {
+                document.setVerificationStatus("RESUBMIT_REQUIRED");
+                document.setVerificationRemarks(note);
+                document.setVerifiedAt(LocalDateTime.now());
+                document.setVerifiedBy(actorRole);
+            }
+
             case "REJECT" -> {
                 document.setVerificationStatus("REJECTED");
                 document.setVerificationRemarks(note);
@@ -417,6 +453,10 @@ public class EligibilityService {
         applicationRepository.save(app);
         addRemark(app, actorRole.contains("DISTRICT") ? "DISTRICT_REVIEW" : "FIELD_VERIFICATION",
                 actorRole, "DOCUMENT_" + normalized, note);
+        auditLogService.record("APPLICATION_DOCUMENT", document.getId(),
+                "DOCUMENT_" + normalized,
+                previousDocumentStatus, document.getVerificationStatus(),
+                "Application #" + app.getId() + " | " + note);
     }
 
     public List<SubsidyApplication> getApplicationsForStatus(ApplicationStatus status) {

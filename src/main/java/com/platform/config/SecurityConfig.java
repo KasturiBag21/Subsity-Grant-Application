@@ -7,6 +7,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.platform.security.ActiveAccountFilter;
+import com.platform.security.OtpAuthenticationSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -18,13 +21,23 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           OtpAuthenticationSuccessHandler otpSuccessHandler,
+                                           ActiveAccountFilter activeAccountFilter) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         // Public routes
-                        .requestMatchers("/", "/register", "/login", "/error",
-                                "/css/**", "/images/**", "/uploads/**",
-                                "/scheme/**").permitAll()
+                        .requestMatchers("/", "/register", "/login", "/officer-register", "/error",
+                                "/css/**", "/images/**",
+                                "/scheme/**", "/forgot-password", "/forgot-password/**", "/verify-otp", "/resend-otp",
+                                "/verify-registration-otp", "/resend-registration-otp").permitAll()
+
+                        // REST API v1: public scheme catalogue; citizen tracking requires login.
+                        .requestMatchers("/api/v1/schemes/**").permitAll()
+                        .requestMatchers("/api/v1/applications/**").hasRole("BENEFICIARY")
+                        .requestMatchers("/api/v1/officer/**")
+                        .hasAnyRole("FIELD_OFFICER", "DISTRICT_OFFICER",
+                                "FINANCE_APPROVER", "DISBURSEMENT_OFFICER", "ADMIN")
 
                         // Dashboard router
                         .requestMatchers("/dashboard").authenticated()
@@ -97,14 +110,15 @@ public class SecurityConfig {
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/dashboard", true)
+                        .successHandler(otpSuccessHandler)
                         .permitAll()
                 )
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
-                )
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/uploads/**"));
+                );
+
+        http.addFilterAfter(activeAccountFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

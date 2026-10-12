@@ -28,6 +28,7 @@
 <header class="header">
     <div class="brand"><h1>SAGAR<span>.</span> Admin</h1><p>Subsidy &amp; Grant Administration Portal</p></div>
     <nav class="nav">
+        <a href="/admin/officers">👥 Officer Management</a>
         <a href="/eligibility/admin/monitor">🖥 System Monitor</a>
         <a href="/milestone3/analytics">📊 Analytics</a>
         <a href="/">Public Portal</a>
@@ -257,5 +258,9 @@
     </div>
 </main>
 
+
+<div style="position:fixed;right:24px;bottom:24px;z-index:1000;">
+    <a th:href="@{/admin/audit}" style="display:inline-block;background:#07178f;color:white;padding:12px 18px;border-radius:6px;text-decoration:none;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.18);">Audit Trail</a>
+</div>
 </body>
 </html>

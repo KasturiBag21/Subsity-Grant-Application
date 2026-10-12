@@ -1,7 +1,11 @@
 package com.platform.web;
 
+import com.platform.security.OtpService;
+import com.platform.security.OtpAuthenticationSuccessHandler;
+import com.platform.security.RegistrationOtpService;
 import java.util.ArrayList;
 import com.platform.application.*;
+import com.platform.audit.AuditLogService;
 import com.platform.disbursement.DisbursementPlan;
 import com.platform.disbursement.DisbursementMilestone;
 import com.platform.disbursement.DisbursementPlanRepository;
@@ -10,6 +14,8 @@ import com.platform.scheme.SchemeService;
 import com.platform.user.*;
 import com.platform.util.DocumentKeyUtil;
 import com.platform.util.SimplePdfUtil;
+import com.platform.security.JurisdictionService;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -49,9 +55,13 @@ public class WebController {
     @Autowired private SchemeService schemeService;
     @Autowired private SubsidyApplicationRepository subsidyApplicationRepository;
     @Autowired private EligibilityService eligibilityService;
+    @Autowired private AuditLogService auditLogService;
     @Autowired private ApplicationDocumentRepository applicationDocumentRepository;
     @Autowired private ApplicationRemarkRepository applicationRemarkRepository;
     @Autowired private DisbursementPlanRepository disbursementPlanRepository;
+    @Autowired private JurisdictionService jurisdictionService;
+    @Autowired private RegistrationOtpService registrationOtpService;
+    @Autowired private OtpService otpService;
 
     // =========================================================
     // PUBLIC HOME
@@ -71,6 +81,20 @@ public class WebController {
         if (selectedScheme != null && !selectedScheme.isBlank()) dto.setSchemeName(selectedScheme);
         model.addAttribute("user", dto);
         model.addAttribute("schemes", schemeService.getActiveSchemes());
+        jakarta.servlet.http.HttpSession session =
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                        org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                        .getRequest().getSession(false);
+        if (session != null) {
+            String pendingEmail = (String) session.getAttribute(RegistrationOtpService.PENDING_EMAIL);
+            if (pendingEmail != null) {
+                model.addAttribute("otpStage", true);
+                model.addAttribute("maskedEmail", maskEmail(pendingEmail));
+                if (registrationOtpService.isDevDisplay()) {
+                    model.addAttribute("devOtp", session.getAttribute(RegistrationOtpService.DEV_OTP));
+                }
+            }
+        }
         return "register";
     }
 
@@ -92,6 +116,7 @@ public class WebController {
             beneficiary.setContactNumber(dto.getContactNumber());
             beneficiary.setAge(dto.getAge());
             beneficiary.setState(dto.getState());
+            beneficiary.setDistrict(dto.getDistrict());
             beneficiary.setGender(dto.getGender());
             beneficiary.setDisabilityStatus(dto.getDisabilityStatus());
             beneficiary.setResidenceType(dto.getResidenceType());
@@ -102,8 +127,24 @@ public class WebController {
             beneficiary.setUser(entityUser);
             entityUser.setBeneficiary(beneficiary);
 
-            userService.registerUser(entityUser);
-            return "redirect:/login?success";
+            // Citizen account exists only as a disabled pending record until email OTP succeeds.
+            entityUser.setAccountStatus("PENDING_EMAIL_VERIFICATION");
+            User savedUser = userService.registerUser(entityUser);
+
+            String developmentOtp = registrationOtpService.issueOtp(savedUser.getEmail(), false);
+            jakarta.servlet.http.HttpSession session =
+                    ((org.springframework.web.context.request.ServletRequestAttributes)
+                            org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                            .getRequest().getSession(true);
+
+            session.setAttribute(RegistrationOtpService.PENDING_EMAIL, savedUser.getEmail());
+            if (developmentOtp != null) {
+                session.setAttribute(RegistrationOtpService.DEV_OTP, developmentOtp);
+            } else {
+                session.removeAttribute(RegistrationOtpService.DEV_OTP);
+            }
+
+            return "redirect:/register?otp";
         } catch (UserRegistrationException e) {
             model.addAttribute("error", e.getMessage());
             model.addAttribute("schemes", schemeService.getActiveSchemes());
@@ -115,7 +156,17 @@ public class WebController {
     // LOGIN
     // =========================================================
     @GetMapping("/login")
-    public String showLoginPage() { return "login"; }
+    public String showLoginPage(jakarta.servlet.http.HttpSession session, Model model) {
+        String pendingEmail = (String) session.getAttribute(OtpAuthenticationSuccessHandler.PENDING_EMAIL);
+        if (pendingEmail != null) {
+            model.addAttribute("otpStage", true);
+            model.addAttribute("maskedEmail", maskEmail(pendingEmail));
+            if (otpService.isDevDisplay()) {
+                model.addAttribute("devOtp", session.getAttribute(OtpAuthenticationSuccessHandler.DEV_OTP));
+            }
+        }
+        return "login";
+    }
 
     // =========================================================
     // DASHBOARD ROUTER
@@ -180,6 +231,14 @@ public class WebController {
         List<SubsidyApplication> disbursalQueue = isDisburse
                 ? subsidyApplicationRepository.findByApplicationStatus(ApplicationStatus.FUND_DISBURSEMENT)
                 : Collections.emptyList();
+
+        // Milestone 4A.2: server-backed jurisdiction filtering.
+        // Legacy seeded officers without assignments retain the old all-India development view.
+        fieldQueue = jurisdictionService.filter(userDetails, fieldQueue);
+        resubmittedQueue = jurisdictionService.filter(userDetails, resubmittedQueue);
+        districtQueue = jurisdictionService.filter(userDetails, districtQueue);
+        financeQueue = jurisdictionService.filter(userDetails, financeQueue);
+        disbursalQueue = jurisdictionService.filter(userDetails, disbursalQueue);
 
         fieldQueue.forEach(this::enrichApplicationDocumentState);
         resubmittedQueue.forEach(this::enrichApplicationDocumentState);
@@ -304,6 +363,7 @@ public class WebController {
     public String updateCitizenProfile(@AuthenticationPrincipal UserDetails userDetails,
                                        @RequestParam String fullName, @RequestParam String contactNumber,
                                        @RequestParam String address,  @RequestParam String state,
+                                       @RequestParam(required = false) String district,
                                        @RequestParam String occupation, @RequestParam double income,
                                        @RequestParam String schemeName, @RequestParam String gender,
                                        @RequestParam String disabilityStatus, @RequestParam String residenceType) {
@@ -314,6 +374,7 @@ public class WebController {
         if (b != null) {
             b.setFullName(fullName); b.setContactNumber(contactNumber);
             b.setAddress(address);   b.setState(state);
+            if (district != null && !district.isBlank()) b.setDistrict(district.trim());
             b.setOccupation(occupation); b.setIncome(income);
             b.setSchemeName(schemeName); b.setGender(gender);
             b.setDisabilityStatus(disabilityStatus); b.setResidenceType(residenceType);
@@ -484,6 +545,12 @@ public class WebController {
         // Save the application first so the generated ID can be used as the upload directory.
         SubsidyApplication savedApplication = subsidyApplicationRepository.save(application);
         saveUploadedDocuments(savedApplication, scheme, files);
+
+        auditLogService.record("SUBSIDY_APPLICATION", savedApplication.getId(),
+                "APPLICATION_SUBMITTED", null,
+                savedApplication.getApplicationStatus().name(),
+                "Citizen submitted application for scheme: " + scheme.getSchemeName()
+                        + " | eligibilityScore=" + savedApplication.getEligibilityScore());
 
         model.addAttribute("application", savedApplication);
         model.addAttribute("applicationDocuments", applicationDocumentRepository.findByApplicationIdOrderByOptionalDocumentAscDocumentNameAsc(savedApplication.getId()));
@@ -1672,4 +1739,10 @@ public class WebController {
         dst.setResidenceType(src.getResidenceType());
         dst.setSchemeName(schemeName);
     }
+    private String maskEmail(String email) {
+        int at = email == null ? -1 : email.indexOf('@');
+        if (at <= 1) return email;
+        return email.charAt(0) + "***" + email.substring(at - 1);
+    }
+
 }

@@ -4,6 +4,7 @@ import com.platform.application.SubsidyApplication;
 import com.platform.scheme.Scheme;
 import com.platform.application.SubsidyApplicationRepository;
 import com.platform.util.SimplePdfUtil;
+import com.platform.security.JurisdictionService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -31,15 +32,18 @@ public class Milestone3Controller {
     private final DisbursementPlanService planService;
     private final DisbursementAnalyticsService analyticsService;
     private final com.platform.scheme.SchemeRepository schemeRepository;
+    private final JurisdictionService jurisdictionService;
 
     public Milestone3Controller(SubsidyApplicationRepository applicationRepository,
                                 DisbursementPlanService planService,
                                 DisbursementAnalyticsService analyticsService,
-                                com.platform.scheme.SchemeRepository schemeRepository) {
+                                com.platform.scheme.SchemeRepository schemeRepository,
+                                JurisdictionService jurisdictionService) {
         this.applicationRepository = applicationRepository;
         this.planService = planService;
         this.analyticsService = analyticsService;
         this.schemeRepository = schemeRepository;
+        this.jurisdictionService = jurisdictionService;
     }
 
     @GetMapping("/disbursement/{applicationId}")
@@ -50,8 +54,7 @@ public class Milestone3Controller {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
 
         try {
-            SubsidyApplication app = applicationRepository.findDetailedById(applicationId)
-                    .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
+            SubsidyApplication app = requireJurisdiction(applicationId, userDetails);
             DisbursementPlan plan = planService.getOrCreatePlan(app);
             model.addAttribute("application", app);
             model.addAttribute("appId", applicationId);
@@ -86,6 +89,7 @@ public class Milestone3Controller {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
 
         try {
+            requireJurisdiction(applicationId, userDetails);
             List<DisbursementPlanService.MilestoneInput> inputs = new ArrayList<>();
             for (DisbursementPlanForm.MilestoneForm m : form.getMilestones()) {
                 if (m.getName() == null || m.getName().isBlank()
@@ -142,6 +146,7 @@ public class Milestone3Controller {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
         try {
             Long applicationId = planService.getApplicationIdForMilestone(milestoneId);
+            requireJurisdiction(applicationId, userDetails);
             planService.requestCompliance(milestoneId, remarks);
             redirectAttributes.addFlashAttribute("success", "Applicant has been requested to submit the milestone compliance document.");
             return "redirect:/milestone3/disbursement/" + applicationId;
@@ -159,6 +164,7 @@ public class Milestone3Controller {
             DisbursementMilestone m = planService.getMilestone(milestoneId);
             if (m.getComplianceStoredFilename() == null) return ResponseEntity.notFound().build();
             Long appId = m.getPlan().getApplication().getId();
+            requireJurisdiction(appId, userDetails);
             Path path = Paths.get(System.getProperty("user.dir"), "uploads", "applications",
                     String.valueOf(appId), "compliance", m.getComplianceStoredFilename()).normalize();
             if (!Files.exists(path)) return ResponseEntity.notFound().build();
@@ -180,6 +186,7 @@ public class Milestone3Controller {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
         try {
             Long applicationId = planService.getApplicationIdForMilestone(milestoneId);
+            requireJurisdiction(applicationId, userDetails);
             planService.submitCompliance(milestoneId, remarks);
             redirectAttributes.addFlashAttribute("success", "Compliance evidence marked as submitted.");
             return "redirect:/milestone3/disbursement/" + applicationId;
@@ -198,6 +205,7 @@ public class Milestone3Controller {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
         try {
             Long applicationId = planService.getApplicationIdForMilestone(milestoneId);
+            requireJurisdiction(applicationId, userDetails);
             planService.verifyCompliance(milestoneId, approve, remarks);
             redirectAttributes.addFlashAttribute("success",
                     approve ? "Compliance verified. Milestone is ready for fund release."
@@ -217,6 +225,7 @@ public class Milestone3Controller {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
         try {
             Long applicationId = planService.getApplicationIdForMilestone(milestoneId);
+            requireJurisdiction(applicationId, userDetails);
             planService.releaseMilestone(milestoneId, null, remarks);
 //            planService.releaseMilestone(milestoneId, reference, remarks);
             redirectAttributes.addFlashAttribute("success",
@@ -260,6 +269,7 @@ public class Milestone3Controller {
                            RedirectAttributes redirectAttributes) {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
         try {
+            requireJurisdiction(applicationId, userDetails);
             planService.holdPlan(applicationId, remarks);
             redirectAttributes.addFlashAttribute("success", "Finance disbursement workflow placed on hold.");
         } catch (RuntimeException ex) {
@@ -274,6 +284,7 @@ public class Milestone3Controller {
                              RedirectAttributes redirectAttributes) {
         if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
         try {
+            requireJurisdiction(applicationId, userDetails);
             planService.resumePlan(applicationId);
             redirectAttributes.addFlashAttribute("success", "Finance disbursement workflow resumed.");
         } catch (RuntimeException ex) {
@@ -307,8 +318,7 @@ public class Milestone3Controller {
         String selectedSchemeName = null;
 
         if (applicationId != null) {
-            SubsidyApplication selectedApplication = applicationRepository.findById(applicationId)
-                    .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
+            SubsidyApplication selectedApplication = requireJurisdiction(applicationId, userDetails);
             if (selectedApplication.getScheme() != null) {
                 selectedSchemeId = selectedApplication.getScheme().getId();
                 selectedSchemeName = selectedApplication.getScheme().getSchemeName();
@@ -321,7 +331,7 @@ public class Milestone3Controller {
                     .orElse("Selected Scheme");
         }
 
-        model.addAttribute("analytics", analyticsService.buildSnapshot(selectedSchemeId));
+        model.addAttribute("analytics", analyticsService.buildSnapshot(selectedSchemeId, userDetails));
         model.addAttribute("schemeFiltered", selectedSchemeId != null);
         model.addAttribute("selectedSchemeId", selectedSchemeId);
         model.addAttribute("selectedSchemeName", selectedSchemeName);
@@ -334,6 +344,13 @@ public class Milestone3Controller {
                         || hasAuthority(userDetails, "ROLE_DISBURSEMENT_OFFICER"));
 
         return "milestone3-analytics";
+    }
+
+    private SubsidyApplication requireJurisdiction(Long applicationId, UserDetails userDetails) {
+        SubsidyApplication app = applicationRepository.findDetailedById(applicationId)
+                .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
+        jurisdictionService.requireAccess(userDetails, app);
+        return app;
     }
 
     private boolean hasAuthority(UserDetails userDetails, String authority) {

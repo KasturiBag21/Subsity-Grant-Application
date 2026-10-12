@@ -265,6 +265,10 @@
                                 th:value="${s}" th:text="${s}" th:selected="${user?.beneficiary?.state == s}"></option>
                     </select>
                 </div>
+                <div class="mfield">
+                    <label>District</label>
+                    <input type="text" name="district" th:value="${user?.beneficiary?.district}" placeholder="Your district" maxlength="100">
+                </div>
                 <div class="mfield" style="grid-column:span 2;">
                     <label>Subsidy Scheme</label>
                     <select name="schemeName" required>

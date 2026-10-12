@@ -18,6 +18,18 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(unique = true)
+    private String username;
+
+    private String fullName;
+    private String phoneNumber;
+    private String assignedState;
+    private String assignedDistrict;
+
+    // Null is treated as ACTIVE for Milestone 1-3 legacy/test accounts.
+    // Newly onboarded officers explicitly start as PENDING_APPROVAL.
+    private String accountStatus;
+
     // 🔍 FIXED: Changing this collection initialization to a mutable HashSet allows Hibernate to write to your user_roles table!
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
@@ -34,6 +46,21 @@ public class User {
     public void setEmail(String email) { this.email = email; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getAssignedState() { return assignedState; }
+    public void setAssignedState(String assignedState) { this.assignedState = assignedState; }
+    public String getAssignedDistrict() { return assignedDistrict; }
+    public void setAssignedDistrict(String assignedDistrict) { this.assignedDistrict = assignedDistrict; }
+    public String getAccountStatus() { return accountStatus; }
+    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
+    public boolean isLoginAllowed() {
+        return accountStatus == null || accountStatus.isBlank() || "ACTIVE".equals(accountStatus);
+    }
     public Set<String> getRoles() { return roles; }
     public void setRoles(Set<String> roles) { this.roles = roles; }
     public Beneficiary getBeneficiary() { return beneficiary; }

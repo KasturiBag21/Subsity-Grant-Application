@@ -18,6 +18,7 @@ public class Beneficiary {
     // and fullName/state are never persisted to the database.
     private String fullName;
     private String state;
+    private String district;
 
     // NEW: needed to evaluate scheme-specific criteria (gender/disability/residence requirements)
     private String gender;            // Male / Female / Other
@@ -54,6 +55,9 @@ public class Beneficiary {
 
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
+
+    public String getDistrict() { return district; }
+    public void setDistrict(String district) { this.district = district; }
 
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }

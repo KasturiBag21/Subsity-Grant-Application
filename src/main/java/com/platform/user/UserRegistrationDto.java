@@ -20,12 +20,16 @@ public class UserRegistrationDto {
     private String email;
 
     @NotBlank(message = "Password cannot be empty")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9\\s])\\S{8,}$",
+            message = "Password must be at least 8 characters and include uppercase, lowercase, number and special character"
+    )
     private String password;
 
-    @NotBlank(message = "Government ID cannot be empty")
+    @NotBlank(message = "Aadhaar number cannot be empty")
     @Pattern(
-            regexp = "^([0-9]{12}|[A-Z]{5}[0-9]{4}[A-Z]{1})$",
-            message = "Must be a 12-digit Aadhaar Number or a valid PAN Card (e.g., ABCDE1234F)"
+            regexp = "^[0-9]{12}$",
+            message = "Aadhaar number must contain exactly 12 digits"
     )
     private String governmentId;
 
@@ -42,6 +46,9 @@ public class UserRegistrationDto {
 
     @NotBlank(message = "State is required")
     private String state;
+
+    @NotBlank(message = "District is required")
+    private String district;
 
     @NotBlank(message = "Gender is required")
     private String gender;
@@ -80,6 +87,8 @@ public class UserRegistrationDto {
     public void setAge(int age) { this.age = age; }
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
+    public String getDistrict() { return district; }
+    public void setDistrict(String district) { this.district = district; }
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
     public String getDisabilityStatus() { return disabilityStatus; }

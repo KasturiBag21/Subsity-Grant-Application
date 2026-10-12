@@ -95,7 +95,7 @@ public class SchemeDataLoader {
             ensureOfficer(userRepository, passwordEncoder, "district.officer@gmail.com", "district123", "ROLE_DISTRICT_OFFICER");
             ensureOfficer(userRepository, passwordEncoder, "finance.approver@gmail.com", "finance123",  "ROLE_FINANCE_APPROVER");
             ensureOfficer(userRepository, passwordEncoder, "disbursement.officer@gmail.com", "disburse123", "ROLE_DISBURSEMENT_OFFICER");
-            ensureOfficer(userRepository, passwordEncoder, "admin@sagar.gov.in", "admin123", "ROLE_ADMIN");
+            ensureOfficer(userRepository, passwordEncoder, "sagar.subsidy.admin@gmail.com", "admin123", "ROLE_ADMIN");
             System.out.println(">> Officer and administrator accounts verified.");
         };
     }

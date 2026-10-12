@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGAR Portal - OTP Verification</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        body { background:#f4f7fb; margin:0; font-family:Arial,sans-serif; color:#17233c; }
+        .topbar { background:#fff; border-top:4px solid #24344f; border-bottom:3px solid #ef7d1a; padding:18px 28px; }
+        .brand { font-size:26px; font-weight:800; color:#07178f; }
+        .brand span { color:#ef7d1a; }
+        .sub { color:#91a0b8; font-size:11px; font-weight:700; letter-spacing:1px; margin-top:2px; }
+        .wrap { max-width:520px; margin:70px auto; padding:0 18px; }
+        .card { background:#fff; border-radius:10px; padding:34px; box-shadow:0 10px 30px rgba(31,45,61,.09); border-top:4px solid #07178f; }
+        h2 { color:#07178f; margin:0 0 8px; }
+        .muted { color:#6f7f98; line-height:1.55; }
+        .otp { width:100%; box-sizing:border-box; padding:14px; text-align:center; letter-spacing:8px; font-size:24px; font-weight:800; border:1px solid #cfd8e6; border-radius:6px; margin-top:12px; }
+        .btn { width:100%; padding:12px; border:0; border-radius:6px; font-weight:800; cursor:pointer; margin-top:12px; }
+        .primary { background:#07178f; color:#fff; }
+        .secondary { background:#edf2f8; color:#17233c; }
+        .notice { padding:11px 13px; border-radius:6px; margin:14px 0; font-size:13px; }
+        .dev { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; }
+        .error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+        .success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+        .cancel { text-align:center; margin-top:18px; }
+        .cancel a { color:#07178f; font-weight:700; text-decoration:none; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="brand">SAGAR <span>Portal</span></div>
+    <div class="sub">GOVERNMENT OF INDIA — SECURE LOGIN VERIFICATION</div>
+</div>
+
+<div class="wrap">
+    <div class="card">
+        <h2>Verify your login</h2>
+        <p class="muted">
+            Enter the 6-digit OTP for <strong th:text="${maskedEmail}">registered email</strong>.
+            The OTP expires in 5 minutes.
+        </p>
+
+        <div class="notice error" th:if="${error}" th:text="${error}"></div>
+        <div class="notice success" th:if="${param.resent}">
+            A new OTP was generated. The previous OTP is no longer valid.
+        </div>
+
+        <div class="notice dev" th:if="${devOtp != null}">
+            <strong>Development OTP:</strong>
+            <span th:text="${devOtp}"></span>
+            <br>
+            <small>Visible only because local development OTP display is enabled.</small>
+        </div>
+
+        <form th:action="@{/verify-otp}" method="post">
+            <input class="otp" type="text" name="otp" inputmode="numeric"
+                   pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"
+                   placeholder="000000" required>
+            <button class="btn primary" type="submit">Verify &amp; Continue</button>
+        </form>
+
+        <form th:action="@{/resend-otp}" method="post">
+            <button class="btn secondary" type="submit">Resend OTP</button>
+        </form>
+
+        <div class="cancel"><a th:href="@{/logout}">Cancel login</a></div>
+    </div>
+</div>
+</body>
+</html>

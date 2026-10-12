@@ -5,6 +5,8 @@ import com.platform.application.SubsidyApplication;
 import com.platform.application.SubsidyApplicationRepository;
 import com.platform.scheme.Scheme;
 import com.platform.scheme.SchemeRepository;
+import com.platform.security.JurisdictionService;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +22,16 @@ public class DisbursementAnalyticsService {
     private final SubsidyApplicationRepository applicationRepository;
     private final DisbursementPlanRepository planRepository;
     private final SchemeRepository schemeRepository;
+    private final JurisdictionService jurisdictionService;
 
     public DisbursementAnalyticsService(SubsidyApplicationRepository applicationRepository,
                                         DisbursementPlanRepository planRepository,
-                                        SchemeRepository schemeRepository) {
+                                        SchemeRepository schemeRepository,
+                                        JurisdictionService jurisdictionService) {
         this.applicationRepository = applicationRepository;
         this.planRepository = planRepository;
         this.schemeRepository = schemeRepository;
+        this.jurisdictionService = jurisdictionService;
     }
 
     @Transactional(readOnly = true)
@@ -36,8 +41,22 @@ public class DisbursementAnalyticsService {
 
     @Transactional(readOnly = true)
     public AnalyticsSnapshot buildSnapshot(Long schemeId) {
+        return buildSnapshot(schemeId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AnalyticsSnapshot buildSnapshot(Long schemeId, UserDetails principal) {
         List<SubsidyApplication> applications = applicationRepository.findAll();
-        List<DisbursementPlan> plans = planRepository.findAll();
+        if (principal != null) {
+            applications = jurisdictionService.filter(principal, applications);
+        }
+        java.util.Set<Long> allowedApplicationIds = applications.stream()
+                .map(SubsidyApplication::getId)
+                .collect(Collectors.toSet());
+        List<DisbursementPlan> plans = planRepository.findAll().stream()
+                .filter(p -> p.getApplication() != null
+                        && allowedApplicationIds.contains(p.getApplication().getId()))
+                .toList();
         List<Scheme> schemes = schemeRepository.findAll();
 
         if (schemeId != null) {
