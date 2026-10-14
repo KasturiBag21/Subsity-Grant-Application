@@ -35,10 +35,12 @@ public class AdminController {
     @Autowired private UserRepository userRepository;
     @Autowired private DisbursementAnalyticsService analyticsService;
     @Autowired private AuditLogService auditLogService;
+    @Autowired private com.platform.disbursement.DisbursementPlanService planService;
 
     @GetMapping({"", "/dashboard"})
     public String dashboard(@AuthenticationPrincipal UserDetails userDetails,
                             @RequestParam(value = "edit", required = false) Long editId,
+                            @RequestParam(value = "fundReviewOnly", defaultValue = "false") boolean fundReviewOnly,
                             Model model) {
         if (userDetails == null) return "redirect:/login";
 
@@ -65,6 +67,8 @@ public class AdminController {
             recentApplications = new ArrayList<>(recentApplications.subList(0, 12));
         }
 
+        model.addAttribute("fundReviewFlags", planService.getFlaggedPlans());
+        model.addAttribute("fundReviewOnly", fundReviewOnly);
         model.addAttribute("schemes", schemes);
         model.addAttribute("schemeForm", form);
         model.addAttribute("applications", applications);
@@ -74,11 +78,66 @@ public class AdminController {
         addNamedStatusCounts(model, statusCounts);
         addRoleCounts(model, users);
         model.addAttribute("analytics", analyticsService.buildSnapshot());
-        List<com.platform.audit.AuditLog> auditLogs = auditLogService.getRecentLogs();
+        List<com.platform.audit.AuditLog> auditLogs = auditLogService.getRecentLogs().stream()
+                .filter(AdminController::visibleInAdminAudit)
+                .toList();
         model.addAttribute("auditLogs", auditLogs);
         model.addAttribute("recentAuditLogs", auditLogs.size() > 8 ? auditLogs.subList(0, 8) : auditLogs);
         model.addAttribute("applicationStatuses", ApplicationStatus.values());
+        User adminUser = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
+        List<Map<String,String>> adminEvents = new ArrayList<>();
+        if (adminUser != null) {
+            for (com.platform.audit.AuditLog log : auditLogs) {
+                if (!importantAdminNotification(log)) continue;
+                if (adminEvents.size() >= 12) break;
+                Map<String,String> event = new java.util.LinkedHashMap<>();
+                event.put("key", "ADMIN:" + log.getId());
+                event.put("title", log.getAction());
+                event.put("detail", log.getEntityType() + " #" + log.getEntityId());
+                event.put("read", String.valueOf(adminUser.getReadNotificationKeys().contains(event.get("key"))));
+                adminEvents.add(event);
+            }
+        }
+        model.addAttribute("adminEvents", adminEvents);
+        model.addAttribute("adminUnreadCount", adminEvents.stream().filter(e -> !"true".equals(e.get("read"))).count());
+
         return "admin-dashboard";
+    }
+
+    @PostMapping("/fund-review/{planId}/clear")
+    public String clearFundReview(@PathVariable Long planId,
+                                  @RequestParam String resolution,
+                                  @AuthenticationPrincipal UserDetails principal,
+                                  RedirectAttributes redirectAttributes) {
+        if (principal == null || principal.getAuthorities().stream().noneMatch(a ->
+                "ROLE_ADMIN".equals(a.getAuthority()))) return "redirect:/login";
+        try {
+            planService.clearFundReviewFlag(planId, resolution, principal.getUsername());
+            redirectAttributes.addFlashAttribute("success", "Fund review flag cleared. Finance workflow remains on hold until separately resumed.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/admin/dashboard?fundReviewOnly=true#fund-review";
+    }
+
+    @PostMapping("/notifications/read")
+    public String markAdminNotificationRead(@AuthenticationPrincipal UserDetails principal,
+                                            @RequestParam("key") String key) {
+        if (principal == null || principal.getAuthorities().stream().noneMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"))) {
+            return "redirect:/login";
+        }
+        User user = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        if (user == null || !key.matches("ADMIN:[0-9]+")) return "redirect:/admin/dashboard";
+        Long auditId = Long.valueOf(key.substring(6));
+        boolean visible = auditLogService.getRecentLogs().stream()
+                .anyMatch(log -> java.util.Objects.equals(log.getId(), auditId)
+                        && importantAdminNotification(log) && visibleInAdminAudit(log));
+        if (visible) {
+            user.getReadNotificationKeys().add(key);
+            userRepository.save(user);
+        }
+        return "redirect:/admin/dashboard";
     }
 
     @PostMapping("/schemes/save")
@@ -144,6 +203,11 @@ public class AdminController {
         model.addAttribute("auditLogs", auditLogs);
         model.addAttribute("recentAuditLogs", auditLogs.size() > 8 ? auditLogs.subList(0, 8) : auditLogs);
         model.addAttribute("applicationStatuses", ApplicationStatus.values());
+        // Validation rerender has no authenticated principal argument; avoid using
+        // dashboard-only local variables here.
+        model.addAttribute("adminEvents", java.util.Collections.emptyList());
+        model.addAttribute("adminUnreadCount", 0L);
+
         return "admin-dashboard";
     }
 
@@ -181,4 +245,20 @@ public class AdminController {
                 ? "The requested administrator operation could not be completed."
                 : ex.getMessage();
     }
+    // Keep security events in the database; only filter their presentation to admins.
+    private static boolean visibleInAdminAudit(com.platform.audit.AuditLog log) {
+        String role = log.getActorRole() == null ? "" : log.getActorRole().toUpperCase(java.util.Locale.ROOT);
+        return !role.contains("BENEFICIARY") && !role.contains("CITIZEN");
+    }
+
+    private static boolean importantAdminNotification(com.platform.audit.AuditLog log) {
+        String action = log.getAction() == null ? "" : log.getAction().toUpperCase(java.util.Locale.ROOT);
+        String entity = log.getEntityType() == null ? "" : log.getEntityType().toUpperCase(java.util.Locale.ROOT);
+        if (action.contains("OTP") || action.contains("LOGIN") || action.contains("LOGOUT")
+                || action.contains("SIGN_IN") || action.contains("SIGN_OUT")) return false;
+        return "FUND_REVIEW".equals(entity) || action.startsWith("OFFICER_")
+                || action.startsWith("SCHEME_") || action.contains("SUSPENDED")
+                || action.contains("REACTIVATED");
+    }
+
 }

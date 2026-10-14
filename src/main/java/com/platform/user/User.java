@@ -36,6 +36,14 @@ public class User {
     @Column(name = "role")
     private Set<String> roles = new HashSet<>();
 
+    // Per-account read receipts for application and reminder alerts.
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "user_notification_reads", joinColumns = @JoinColumn(name = "user_id"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "event_key"}))
+    @Column(name = "event_key", nullable = false, length = 160)
+    private Set<String> readNotificationKeys = new HashSet<>();
+
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Beneficiary beneficiary;
 
@@ -63,6 +71,8 @@ public class User {
     }
     public Set<String> getRoles() { return roles; }
     public void setRoles(Set<String> roles) { this.roles = roles; }
+    public Set<String> getReadNotificationKeys() { return readNotificationKeys; }
+    public void setReadNotificationKeys(Set<String> keys) { this.readNotificationKeys = keys; }
     public Beneficiary getBeneficiary() { return beneficiary; }
     public void setBeneficiary(Beneficiary beneficiary) { this.beneficiary = beneficiary; }
 }

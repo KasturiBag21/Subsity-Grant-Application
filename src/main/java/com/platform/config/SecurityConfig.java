@@ -29,7 +29,7 @@ public class SecurityConfig {
                         // Public routes
                         .requestMatchers("/", "/register", "/login", "/officer-register", "/error",
                                 "/css/**", "/images/**",
-                                "/scheme/**", "/forgot-password", "/forgot-password/**", "/verify-otp", "/resend-otp",
+                                "/scheme/**", "/verify-otp", "/resend-otp", "/cancel-otp",
                                 "/verify-registration-otp", "/resend-registration-otp").permitAll()
 
                         // REST API v1: public scheme catalogue; citizen tracking requires login.

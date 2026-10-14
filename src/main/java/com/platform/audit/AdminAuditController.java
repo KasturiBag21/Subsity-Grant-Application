@@ -42,7 +42,8 @@ public class AdminAuditController {
             // Exclude beneficiary-originated activity from the admin-facing audit trail.
             // Keep stored audit records intact for historical integrity.
             p.add(cb.or(cb.isNull(root.get("actorRole")),
-                    cb.notEqual(cb.upper(root.get("actorRole")), "ROLE_BENEFICIARY")));
+                    cb.and(cb.notLike(cb.upper(root.get("actorRole")), "%BENEFICIARY%"),
+                            cb.notLike(cb.upper(root.get("actorRole")), "%CITIZEN%"))));
             if(StringUtils.hasText(actor)) p.add(cb.like(cb.lower(root.get("actorEmail")),"%"+actor.trim().toLowerCase()+"%"));
             if(StringUtils.hasText(role)) p.add(cb.equal(cb.lower(root.get("actorRole")),role.trim().toLowerCase()));
             if(StringUtils.hasText(action)) p.add(cb.like(cb.lower(root.get("action")),"%"+action.trim().toLowerCase()+"%"));

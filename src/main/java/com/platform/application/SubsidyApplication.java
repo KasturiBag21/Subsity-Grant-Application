@@ -59,6 +59,12 @@ public class SubsidyApplication {
     @Transient
     private List<String> missingMandatoryDocuments = new ArrayList<>();
 
+    // Last successfully delivered action-alert key (per application).
+    @Column(length = 160)
+    private String lastCitizenActionEmailKey;
+    public String getLastCitizenActionEmailKey() { return lastCitizenActionEmailKey; }
+    public void setLastCitizenActionEmailKey(String key) { lastCitizenActionEmailKey = key; }
+
     private String fieldInspectionRemarks;
     private String districtReviewRemarks;
     private String financeApprovalRemarks;

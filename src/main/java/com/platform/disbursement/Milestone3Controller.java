@@ -27,6 +27,7 @@ import java.util.List;
 @Controller
 @RequestMapping("/milestone3")
 public class Milestone3Controller {
+    @org.springframework.beans.factory.annotation.Autowired private com.platform.config.CloudinaryStorageService cloudinaryStorage;
 
     private final SubsidyApplicationRepository applicationRepository;
     private final DisbursementPlanService planService;
@@ -61,7 +62,14 @@ public class Milestone3Controller {
             model.addAttribute("sanctionAmount", app.getSanctionAmount());
             com.platform.user.Beneficiary beneficiary = app.getUser() == null ? null : app.getUser().getBeneficiary();
             model.addAttribute("beneficiary", beneficiary);
-            model.addAttribute("beneficiaryName", beneficiary == null || beneficiary.getFullName() == null ? app.getUser().getEmail() : beneficiary.getFullName());
+            String beneficiaryName = beneficiary == null ? null : beneficiary.getFullName();
+            if (beneficiaryName == null || beneficiaryName.isBlank()) {
+                beneficiaryName = app.getUser() == null ? null : app.getUser().getFullName();
+            }
+            if (beneficiaryName == null || beneficiaryName.isBlank()) {
+                beneficiaryName = app.getUser() == null ? "Not available" : app.getUser().getEmail();
+            }
+            model.addAttribute("beneficiaryName", beneficiaryName);
             model.addAttribute("schemeName", app.getScheme() == null ? "—" : app.getScheme().getSchemeName());
             String account = app.getPaymentAccountNumber();
             model.addAttribute("paymentAccountHolderName", app.getPaymentAccountHolderName());
@@ -165,14 +173,15 @@ public class Milestone3Controller {
             if (m.getComplianceStoredFilename() == null) return ResponseEntity.notFound().build();
             Long appId = m.getPlan().getApplication().getId();
             requireJurisdiction(appId, userDetails);
-            Path path = Paths.get(System.getProperty("user.dir"), "uploads", "applications",
-                    String.valueOf(appId), "compliance", m.getComplianceStoredFilename()).normalize();
-            if (!Files.exists(path)) return ResponseEntity.notFound().build();
-            String type = Files.probeContentType(path);
-            MediaType media = type == null ? MediaType.APPLICATION_OCTET_STREAM : MediaType.parseMediaType(type);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + m.getComplianceOriginalFilename() + "\"")
-                    .contentType(media).body(Files.readAllBytes(path));
+            byte[] content = cloudinaryStorage.read(appId, m.getComplianceStoredFilename(), true);
+            String f = m.getComplianceStoredFilename().toLowerCase(java.util.Locale.ROOT);
+            MediaType media = f.endsWith(".pdf") ? MediaType.APPLICATION_PDF :
+                    f.endsWith(".png") ? MediaType.IMAGE_PNG :
+                    (f.endsWith(".jpg") || f.endsWith(".jpeg")) ? MediaType.IMAGE_JPEG : MediaType.APPLICATION_OCTET_STREAM;
+            String safeName = m.getComplianceOriginalFilename() == null ? "document" :
+                    m.getComplianceOriginalFilename().replace("\"", "").replace("\r", "").replace("\n", "");
+            return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
+                    "inline; filename=\"" + safeName + "\"").contentType(media).body(content);
         } catch (Exception ex) {
             return ResponseEntity.notFound().build();
         }
@@ -260,6 +269,22 @@ public class Milestone3Controller {
             lines.add("System-generated transaction receipt - simulated disbursement for prototype/demo purposes.");
             return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=transaction-receipt-SUB-"+app.getId()+"-M"+ms.getSequenceNo()+".pdf").contentType(MediaType.APPLICATION_PDF).body(SimplePdfUtil.onePage("SAGAR - Transaction Receipt",lines));
         } catch(RuntimeException ex){ return ResponseEntity.notFound().build(); }
+    }
+
+    @PostMapping("/disbursement/{applicationId}/fund-review/flag")
+    public String flagFunds(@PathVariable Long applicationId,
+                            @RequestParam String reason, @RequestParam String remarks,
+                            @AuthenticationPrincipal UserDetails userDetails,
+                            RedirectAttributes redirectAttributes) {
+        if (!isDisbursementOfficer(userDetails)) return "redirect:/dashboard/officer";
+        try {
+            requireJurisdiction(applicationId, userDetails);
+            planService.raiseFundReviewFlag(applicationId, reason, remarks, userDetails.getUsername());
+            redirectAttributes.addFlashAttribute("success", "Fund review flagged and future installments blocked. Sent to Admin review.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/milestone3/disbursement/" + applicationId;
     }
 
     @PostMapping("/disbursement/{applicationId}/hold")

@@ -5,6 +5,7 @@ import com.platform.user.UserRepository;
 import com.platform.application.SubsidyApplicationRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +19,9 @@ public class SchemeDataLoader {
 
     @Autowired
     private SubsidyApplicationRepository applicationRepository;
+
+    @Value("${sagar.seed.demo-officers:false}")
+    private boolean seedDemoOfficers;
 
     @Bean
     CommandLineRunner loadSchemes(SchemeRepository schemeRepository,
@@ -90,13 +94,16 @@ public class SchemeDataLoader {
 
             System.out.println(">> Master Scheme Rules Sync Complete. 7 schemes verified/updated.");
 
-            // Always ensure officer accounts exist — regardless of citizen registrations.
-            ensureOfficer(userRepository, passwordEncoder, "field.officer@gmail.com",    "field123",    "ROLE_FIELD_OFFICER");
-            ensureOfficer(userRepository, passwordEncoder, "district.officer@gmail.com", "district123", "ROLE_DISTRICT_OFFICER");
-            ensureOfficer(userRepository, passwordEncoder, "finance.approver@gmail.com", "finance123",  "ROLE_FINANCE_APPROVER");
-            ensureOfficer(userRepository, passwordEncoder, "disbursement.officer@gmail.com", "disburse123", "ROLE_DISBURSEMENT_OFFICER");
-            ensureOfficer(userRepository, passwordEncoder, "sagar.subsidy.admin@gmail.com", "admin123", "ROLE_ADMIN");
-            System.out.println(">> Officer and administrator accounts verified.");
+            // Demo credentials must never be created automatically in production.
+            if (seedDemoOfficers) {
+                // Always ensure officer accounts exist — regardless of citizen registrations.
+                ensureOfficer(userRepository, passwordEncoder, "field.officer@gmail.com",    "field123",    "ROLE_FIELD_OFFICER");
+                ensureOfficer(userRepository, passwordEncoder, "district.officer@gmail.com", "district123", "ROLE_DISTRICT_OFFICER");
+                ensureOfficer(userRepository, passwordEncoder, "finance.approver@gmail.com", "finance123",  "ROLE_FINANCE_APPROVER");
+                ensureOfficer(userRepository, passwordEncoder, "disbursement.officer@gmail.com", "disburse123", "ROLE_DISBURSEMENT_OFFICER");
+                ensureOfficer(userRepository, passwordEncoder, "sagar.subsidy.admin@gmail.com", "admin123", "ROLE_ADMIN");
+                System.out.println(">> Officer and administrator accounts verified.");
+            }
         };
     }
 

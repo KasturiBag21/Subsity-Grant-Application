@@ -128,7 +128,7 @@ body {
     right: -10%;
     width: 550px;
     height: 550px;
-    background: radial-gradient(circle, rgba(0,0,128,0.03) 0%, rgba(255,255,255,0) 70%);
+    background: radial-gradient(circle, rgba(0, 0, 128, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
     border-radius: 50%;
 }
 
@@ -297,6 +297,7 @@ body {
     color: white;
     box-shadow: 0 4px 12px rgba(0, 0, 128, 0.15);
 }
+
 /* Back Button Base Styling */
 .btn-back {
     display: inline-flex;
@@ -316,7 +317,7 @@ body {
 
 /* Criteria Guide Block Panel */
 .criteria-info-box {
-    background: var(--sagar-blue-light);
+    background: #eaf2ff;
     border-left: 4px solid var(--sagar-saffron);
     padding: 15px 20px;
     border-radius: 4px;
@@ -334,4 +335,202 @@ body {
 
 .criteria-list li {
     margin-bottom: 4px;
+}
+
+/* SAGAR shared footer — scoped to avoid changing dashboard styles */
+.sagar-footer {
+    margin-top: 48px;
+    background: var(--sagar-navy, #000080);
+    color: #fff;
+    font-family: 'Segoe UI', Arial, sans-serif
+}
+
+.sagar-footer__stripe {
+    height: 4px;
+    background: linear-gradient(90deg, #FF9933 0 33.33%, #fff 33.33% 66.66%, #138808 66.66% 100%)
+}
+
+.sagar-footer__inner {
+    max-width: 1250px;
+    margin: 0 auto;
+    padding: 34px 5% 18px
+}
+
+.sagar-footer__main {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 36px;
+    flex-wrap: wrap
+}
+
+.sagar-footer__brand {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -.5px;
+    line-height: 1.1
+}
+
+.sagar-footer__brand span {
+    color: var(--sagar-saffron, #FF9933)
+}
+
+.sagar-footer__eyebrow {
+    margin-top: 6px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: #dbe5fa
+}
+
+.sagar-footer__about p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #dbe5fa;
+    max-width: 430px
+}
+
+.sagar-footer__links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 130px
+}
+
+.sagar-footer__links h2 {
+    margin: 0 0 3px;
+    font-size: 14px;
+    color: #fff
+}
+
+.sagar-footer__links a {
+    font-size: 13px;
+    color: #e4eafa;
+    text-decoration: none
+}
+
+.sagar-footer__links a:hover,
+.sagar-footer__links a:focus-visible {
+    color: #FF9933;
+    text-decoration: underline
+}
+
+.sagar-footer__bottom {
+    border-top: 1px solid rgba(255, 255, 255, .23);
+    margin-top: 24px;
+    padding-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11px;
+    color: #dbe5fa
+}
+
+@media(max-width:600px) {
+    .sagar-footer__inner {
+        padding: 26px 6% 16px
+    }
+
+    .sagar-footer__main {
+        gap: 20px
+    }
+
+    .sagar-footer__bottom {
+        flex-direction: column
+    }
+
+    .sagar-footer__brand {
+        font-size: 25px
+    }
+}
+
+/* SAGAR reference-inspired redesign — presentation only; no form or route changes */
+:root {
+    --sagar-navy: #081d61;
+    --sagar-navy-dark: #061543;
+    --sagar-bg-light: #f4f7fc;
+    --sagar-shadow: 0 8px 28px rgba(8, 29, 97, .08);
+}
+
+body {
+    background-color: var(--sagar-bg-light);
+}
+
+.universal-header {
+    border-top: 3px solid #ff9933;
+    box-shadow: 0 3px 20px rgba(12, 31, 78, .08);
+}
+
+.hero-banner {
+    background-image: linear-gradient(90deg, rgba(5, 20, 67, .97) 0%, rgba(5, 24, 76, .85) 47%, rgba(5, 24, 76, .12) 100%), url('../images/hero-family.webp') !important;
+    background-size: cover !important;
+    background-position: center, right center !important;
+    border-radius: 0 0 22px 22px;
+}
+
+.hero-content {
+    max-width: 680px;
+}
+
+.hero-title {
+    letter-spacing: -.025em;
+    line-height: 1.13;
+}
+
+.scheme-card {
+    border: 1px solid #e5ebf5;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(7, 29, 82, .07);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.scheme-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(7, 29, 82, .13);
+}
+
+.sagar-scheme-image {
+    height: 145px;
+    margin: -20px -20px 18px;
+    background-position: center;
+    background-size: cover;
+    background-image: url('../images/scheme-housing.webp');
+}
+
+.sagar-agriculture {
+    background-image: url('../images/scheme-farming.webp');
+}
+
+.sagar-education {
+    background-image: url('../images/scheme-education.webp');
+}
+
+.sagar-women {
+    background-image: url('../images/scheme-women.webp');
+}
+
+.sagar-housing {
+    background-image: url('../images/scheme-housing.webp');
+}
+
+.nav-btn,
+.submit-action-btn {
+    border-radius: 7px;
+}
+
+@media(max-width:700px) {
+    .hero-banner {
+        background-position: center, right center !important
+    }
+
+    .hero-content {
+        background: rgba(4, 20, 69, .46);
+        border-radius: 12px
+    }
+
+    .sagar-scheme-image {
+        height: 130px
+    }
 }

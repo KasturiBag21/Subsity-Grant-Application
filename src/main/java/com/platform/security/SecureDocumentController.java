@@ -23,13 +23,16 @@ public class SecureDocumentController {
     private final SubsidyApplicationRepository applicationRepository;
     private final UserRepository userRepository;
     private final JurisdictionService jurisdictionService;
+    private final com.platform.config.CloudinaryStorageService cloudinaryStorage;
 
     public SecureDocumentController(SubsidyApplicationRepository applicationRepository,
                                     UserRepository userRepository,
-                                    JurisdictionService jurisdictionService) {
+                                    JurisdictionService jurisdictionService,
+                                    com.platform.config.CloudinaryStorageService cloudinaryStorage) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.jurisdictionService = jurisdictionService;
+        this.cloudinaryStorage = cloudinaryStorage;
     }
 
     /**
@@ -50,30 +53,11 @@ public class SecureDocumentController {
         }
 
         try {
-            Path root = Paths.get(System.getProperty("user.dir"), "uploads", "applications",
-                    String.valueOf(applicationId)).toAbsolutePath().normalize();
-            Path file = root.resolve(filename).normalize();
-
-            // Prevent ../ traversal and only serve a real regular file.
-            if (!file.startsWith(root) || !Files.isRegularFile(file)) {
-                return ResponseEntity.notFound().build();
-            }
-
-            String detected = Files.probeContentType(file);
-            MediaType mediaType;
-            try {
-                mediaType = detected == null
-                        ? MediaType.APPLICATION_OCTET_STREAM
-                        : MediaType.parseMediaType(detected);
-            } catch (Exception ignored) {
-                mediaType = MediaType.APPLICATION_OCTET_STREAM;
-            }
-
+            byte[] content = cloudinaryStorage.read(applicationId, filename, false);
+            MediaType mediaType = mediaTypeFor(filename);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + safeHeaderFilename(filename) + "\"")
-                    .contentType(mediaType)
-                    .body(Files.readAllBytes(file));
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeHeaderFilename(filename) + "\"")
+                    .contentType(mediaType).body(content);
         } catch (Exception ex) {
             return ResponseEntity.notFound().build();
         }
@@ -144,6 +128,14 @@ public class SecureDocumentController {
     private boolean hasRole(UserDetails principal, String role) {
         return principal.getAuthorities().stream()
                 .anyMatch(a -> role.equals(a.getAuthority()));
+    }
+
+    private MediaType mediaTypeFor(String filename) {
+        String f = filename.toLowerCase(java.util.Locale.ROOT);
+        if (f.endsWith(".pdf")) return MediaType.APPLICATION_PDF;
+        if (f.endsWith(".png")) return MediaType.IMAGE_PNG;
+        if (f.endsWith(".jpg") || f.endsWith(".jpeg")) return MediaType.IMAGE_JPEG;
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 
     private String safeHeaderFilename(String filename) {

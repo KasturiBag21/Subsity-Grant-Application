@@ -39,9 +39,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 
 @Controller
 public class WebController {
+    @Autowired private com.platform.config.CloudinaryStorageService cloudinaryStorage;
     // District Officer's staged optional-document selections.
     // Selecting documents does NOT move the application; Send to Applicant does.
     private final Map<Long, List<String>> districtOptionalRequests =
@@ -62,6 +64,9 @@ public class WebController {
     @Autowired private JurisdictionService jurisdictionService;
     @Autowired private RegistrationOtpService registrationOtpService;
     @Autowired private OtpService otpService;
+
+    // Notification receipt writes belong to the authenticated user only.
+    @Autowired private com.platform.disbursement.ComplianceReminderRepository complianceReminderRepository;
 
     // =========================================================
     // PUBLIC HOME
@@ -292,6 +297,43 @@ public class WebController {
         completedHistory.forEach(this::enrichApplicationDocumentState);
         model.addAttribute("completedHistory", completedHistory);
 
+        List<Map<String,String>> officerEvents = new ArrayList<>();
+        if (isField) {
+            for (SubsidyApplication a : fieldQueue) addPortalEvent(officerEvents, "FIELD:"+a.getId()+":FIELD_VERIFICATION", "Field verification assigned", a.getId(), "/dashboard/officer#pending");
+            for (SubsidyApplication a : resubmittedQueue) addPortalEvent(officerEvents, "FIELD:"+a.getId()+":RESUBMITTED", "Documents resubmitted for review", a.getId(), "/dashboard/officer#pending");
+        }
+        if (isDistrict) for (SubsidyApplication a : districtQueue)
+            addPortalEvent(officerEvents, "DISTRICT:"+a.getId()+":DISTRICT_REVIEW", "District decision pending", a.getId(), "/dashboard/officer#pending");
+        if (isFinance) for (SubsidyApplication a : financeQueue)
+            addPortalEvent(officerEvents, "FINANCE:"+a.getId()+":FINANCE_PENDING", "Finance approval pending", a.getId(), "/dashboard/officer#pending");
+        if (isDisburse) {
+            for (SubsidyApplication a : disbursalQueue)
+                addPortalEvent(officerEvents, "DISBURSE:"+a.getId()+":FUND_DISBURSEMENT", "Disbursement action pending", a.getId(), "/dashboard/officer#pending");
+            // Admin-cleared fund reviews: notify Finance without resuming payments.
+            for (DisbursementPlan plan : officerDisbursementPlans.values()) {
+                if (!plan.isFundReviewFlagged() && plan.getFundReviewClearedAt() != null) {
+                    String key = "CLEARED:" + plan.getId() + ":" +
+                            plan.getFundReviewClearedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+                    addPortalEvent(officerEvents, key, "Fund review flag cleared by Admin — review and resume finance if appropriate",
+                            plan.getApplication().getId(), "/milestone3/disbursement/" + plan.getApplication().getId());
+                }
+            }
+            for (DisbursementMilestone m : urgentComplianceMilestones)
+                addPortalEvent(officerEvents, "COMPLIANCE:"+m.getId()+":SUBMITTED", "Compliance document submitted", m.getPlan().getApplication().getId(), "/dashboard/officer#pending");
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            for (DisbursementPlan plan : officerDisbursementPlans.values()) {
+                for (DisbursementMilestone m : plan.getMilestones()) {
+                    if (!m.isComplianceRequested() || m.getComplianceOriginalFilename()!=null || m.getDueDate()==null) continue;
+                    java.time.LocalDateTime due = java.time.LocalDateTime.of(m.getDueDate(), m.getDueTime()==null ? java.time.LocalTime.of(10,0) : m.getDueTime());
+                    if (!due.isAfter(now.plusHours(24))) {
+                        String urgency = due.isBefore(now) ? "Overdue compliance" : "Compliance due within 24 hours";
+                        addPortalEvent(officerEvents, "DUE:"+m.getId()+":"+(due.isBefore(now)?"OVERDUE":"SOON"), urgency,
+                                plan.getApplication().getId(), "/dashboard/officer#pending");
+                    }
+                }
+            }
+        }
+        attachPortalEvents(model, user, officerEvents);
         return "dashboard-officer";
     }
 
@@ -352,8 +394,124 @@ public class WebController {
             if (m.isComplianceRequested() && m.getStatus()!=com.platform.disbursement.MilestoneStatus.RELEASED && m.getComplianceOriginalFilename()==null) citizenNotifications.add(m);
         model.addAttribute("trackingLedger", trackingLedger);
         model.addAttribute("disbursementPlans", disbursementPlans);
+        // Current application-state alerts are scoped to the authenticated citizen's own ledger.
+        // These are live status indicators, not persisted/read-unread event notifications.
+        List<SubsidyApplication> citizenStatusAlerts = trackingLedger.stream()
+                .filter(app -> app.getApplicationStatus() == ApplicationStatus.APPROVED
+                        || app.getApplicationStatus() == ApplicationStatus.REJECTED
+                        || app.getApplicationStatus() == ApplicationStatus.APPLICANT_REVERIFICATION
+                        || app.getApplicationStatus() == ApplicationStatus.COOLING_PERIOD)
+                .toList();
+        model.addAttribute("citizenStatusAlerts", citizenStatusAlerts);
         model.addAttribute("citizenNotifications", citizenNotifications);
+        List<Map<String,String>> citizenEvents = new ArrayList<>();
+        for (SubsidyApplication a : citizenStatusAlerts) {
+            addPortalEvent(citizenEvents, "STATUS:"+a.getId()+":"+a.getApplicationStatus().name(),
+                    "Application " + a.getApplicationStatus().name().replace('_',' ').toLowerCase(java.util.Locale.ROOT),
+                    a.getId(), "/dashboard/citizen");
+        }
+        for (DisbursementMilestone m : citizenNotifications) {
+            addPortalEvent(citizenEvents, "REQUEST:"+m.getId(), "Compliance document requested",
+                    m.getPlan().getApplication().getId(), "/dashboard/citizen");
+            if (m.getLastReminderType()!=null) {
+                addPortalEvent(citizenEvents, "REMINDER:"+m.getId()+":"+m.getLastReminderType(),
+                        "Compliance " + m.getLastReminderType().replace('_',' ').toLowerCase(java.util.Locale.ROOT),
+                        m.getPlan().getApplication().getId(), "/dashboard/citizen");
+            }
+        }
+        attachPortalEvents(model, user, citizenEvents);
         return "dashboard-citizen";
+    }
+
+    // Notification keys contain only event IDs, not message content. All keys are
+    // generated server-side from this user's authorized applications/queues.
+    private void addPortalEvent(List<Map<String,String>> events, String key, String title,
+                                Long applicationId, String url) {
+        Map<String,String> event = new LinkedHashMap<>();
+        event.put("key", key);
+        event.put("title", title);
+        event.put("detail", "SUB-" + applicationId);
+        event.put("url", url);
+        events.add(event);
+    }
+
+    private void attachPortalEvents(Model model, User user, List<Map<String,String>> events) {
+        Set<String> read = user.getReadNotificationKeys();
+        for (Map<String,String> event : events) event.put("read", String.valueOf(read.contains(event.get("key"))));
+        model.addAttribute("portalEvents", events);
+        model.addAttribute("portalUnreadCount", events.stream().filter(e -> !"true".equals(e.get("read"))).count());
+    }
+
+    @PostMapping("/notifications/read")
+    public String markPortalNotificationRead(@AuthenticationPrincipal UserDetails principal,
+                                             @RequestParam("key") String key,
+                                             @RequestParam(value="returnTo",defaultValue="/dashboard") String returnTo) {
+        if (principal == null) return "redirect:/login";
+        User user = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        if (user == null) return "redirect:/login";
+        // A receipt can be written only for an event the account can currently see.
+        // Build the same authorized queue on the appropriate dashboard and check it there.
+        // Restrict key syntax to the known application/reminder event format.
+        if (key.length() > 160 || !key.matches("[A-Z_]+:[0-9]+(?::[A-Z_0-9]+)?")) {
+            return "redirect:/dashboard";
+        }
+        if (!isPortalEventVisible(principal, user, key)) return "redirect:/dashboard";
+        user.getReadNotificationKeys().add(key);
+        userRepository.save(user);
+        return "redirect:" + ("/dashboard/officer".equals(returnTo) ? "/dashboard/officer" : "/dashboard/citizen");
+    }
+
+    private boolean isPortalEventVisible(UserDetails principal, User user, String key) {
+        String[] parts = key.split(":");
+        if (parts.length < 2) return false;
+        long id;
+        try { id = Long.parseLong(parts[1]); } catch (NumberFormatException e) { return false; }
+        String type = parts[0];
+        if ("CLEARED".equals(type)) {
+            boolean finance = principal.getAuthorities().stream().anyMatch(x ->
+                    x.getAuthority().contains("FINANCE_APPROVER") || x.getAuthority().contains("DISBURSEMENT_OFFICER"));
+            if (!finance || parts.length != 3) return false;
+            return disbursementPlanRepository.findById(id).map(p ->
+                    !p.isFundReviewFlagged() && p.getFundReviewClearedAt() != null
+                            && parts[2].equals(String.valueOf(p.getFundReviewClearedAt()
+                            .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()))
+                            && jurisdictionService.canAccess(principal, p.getApplication())).orElse(false);
+        }
+        if ("STATUS".equals(type)) {
+            return subsidyApplicationRepository.findById(id).map(a -> java.util.Objects.equals(a.getUser().getId(), user.getId())
+                    && parts.length == 3 && a.getApplicationStatus().name().equals(parts[2])).orElse(false);
+        }
+        if ("REQUEST".equals(type) || "REMINDER".equals(type) || "DUE".equals(type) || "COMPLIANCE".equals(type)) {
+            return disbursementPlanRepository.findAll().stream()
+                    .flatMap(p -> p.getMilestones().stream())
+                    .filter(m -> java.util.Objects.equals(m.getId(), id))
+                    .anyMatch(m -> {
+                        SubsidyApplication a = m.getPlan().getApplication();
+                        if ("REQUEST".equals(type)) return java.util.Objects.equals(a.getUser().getId(), user.getId())
+                                && m.isComplianceRequested() && m.getComplianceOriginalFilename()==null;
+                        if ("REMINDER".equals(type)) return java.util.Objects.equals(a.getUser().getId(), user.getId())
+                                && parts.length == 3 && parts[2].equals(m.getLastReminderType())
+                                && m.isComplianceRequested() && m.getComplianceOriginalFilename()==null;
+                        boolean finance = principal.getAuthorities().stream().anyMatch(x ->
+                                x.getAuthority().contains("FINANCE_APPROVER") || x.getAuthority().contains("DISBURSEMENT_OFFICER"));
+                        if (!finance || !jurisdictionService.canAccess(principal,a)) return false;
+                        if ("COMPLIANCE".equals(type)) return m.getComplianceOriginalFilename()!=null;
+                        return m.isComplianceRequested() && m.getComplianceOriginalFilename()==null;
+                    });
+        }
+        if (!Set.of("FIELD","DISTRICT","FINANCE","DISBURSE").contains(type)) return false;
+        return subsidyApplicationRepository.findById(id).map(a -> {
+            if (!jurisdictionService.canAccess(principal,a) || parts.length != 3
+                    || !a.getApplicationStatus().name().equals(parts[2])) return false;
+            String requiredRole = switch (type) {
+                case "FIELD" -> "FIELD_OFFICER";
+                case "DISTRICT" -> "DISTRICT_OFFICER";
+                case "FINANCE" -> "FINANCE_APPROVER";
+                default -> "DISBURSEMENT_OFFICER";
+            };
+            return principal.getAuthorities().stream().anyMatch(x -> x.getAuthority().contains(requiredRole)
+                    || ("DISBURSE".equals(type) && x.getAuthority().contains("FINANCE_APPROVER")));
+        }).orElse(false);
     }
 
     // =========================================================
@@ -365,7 +523,7 @@ public class WebController {
                                        @RequestParam String address,  @RequestParam String state,
                                        @RequestParam(required = false) String district,
                                        @RequestParam String occupation, @RequestParam double income,
-                                       @RequestParam String schemeName, @RequestParam String gender,
+                                       @RequestParam String gender,
                                        @RequestParam String disabilityStatus, @RequestParam String residenceType) {
         if (userDetails == null) return "redirect:/login";
         User user = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
@@ -376,7 +534,7 @@ public class WebController {
             b.setAddress(address);   b.setState(state);
             if (district != null && !district.isBlank()) b.setDistrict(district.trim());
             b.setOccupation(occupation); b.setIncome(income);
-            b.setSchemeName(schemeName); b.setGender(gender);
+            b.setGender(gender);
             b.setDisabilityStatus(disabilityStatus); b.setResidenceType(residenceType);
             userRepository.save(user);
         }
@@ -862,12 +1020,6 @@ public class WebController {
 
         Map<String, String> required = DocumentKeyUtil.parse(scheme.getRequiredDocuments());
         Map<String, String> optional = DocumentKeyUtil.parse(scheme.getOptionalDocuments());
-        String uploadRoot = System.getProperty("user.dir") + java.io.File.separator + "uploads"
-                + java.io.File.separator + "applications" + java.io.File.separator + application.getId();
-        java.io.File directory = new java.io.File(uploadRoot);
-        if (!directory.exists() && !directory.mkdirs()) {
-            throw new IllegalStateException("Unable to create upload directory: " + directory.getAbsolutePath());
-        }
 
         for (Map.Entry<String, MultipartFile> entry : files.entrySet()) {
             if (!entry.getKey().startsWith("document_")) continue;
@@ -884,12 +1036,7 @@ public class WebController {
                 String safeOriginal = org.springframework.util.StringUtils.cleanPath(original)
                         .replaceAll("[^a-zA-Z0-9._-]", "_");
                 String stored = key + "_" + System.currentTimeMillis() + "_" + safeOriginal;
-                java.nio.file.Path target = java.nio.file.Paths.get(uploadRoot, stored).normalize();
-                java.nio.file.Path root = java.nio.file.Paths.get(uploadRoot).toAbsolutePath().normalize();
-                if (!target.toAbsolutePath().startsWith(root)) {
-                    throw new IllegalStateException("Invalid upload filename");
-                }
-                file.transferTo(target.toFile());
+                cloudinaryStorage.upload(application.getId(), stored, file, false);
 
                 ApplicationDocument doc = applicationDocumentRepository
                         .findByApplicationIdAndDocumentKey(application.getId(), key)
@@ -1181,7 +1328,7 @@ public class WebController {
     }
 
     @GetMapping({"/application/{appId}/pdf", "/application/{appId}/download"})
-    public ResponseEntity<byte[]> applicantApplicationPdf(@PathVariable Long appId,
+    public ResponseEntity<byte[]> applicantApplicationPdf(@PathVariable("appId") Long appId,
                                                           @AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) return ResponseEntity.status(401).build();
         User user = userRepository.findByEmail(userDetails.getUsername()).orElse(null);

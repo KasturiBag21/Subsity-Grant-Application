@@ -7,6 +7,12 @@ import com.platform.user.Beneficiary;
 import com.platform.util.DocumentKeyUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailException;
+import org.springframework.mail.javamail.JavaMailSender;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +28,10 @@ public class EligibilityService {
     public static final int COOLING_PERIOD_DAYS = 30;
     public static final int MAX_REJECTIONS_BEFORE_COOLING = 3;
 
+    @Autowired private ObjectProvider<JavaMailSender> mailSenderProvider;
+    @Value("${sagar.mail.enabled:false}") private boolean citizenMailEnabled;
+    @Value("${spring.mail.username:}") private String mailFrom;
+    @Value("${sagar.portal.url:http://localhost:8081}") private String portalUrl;
     @Autowired private SchemeRepository schemeRepository;
     @Autowired private SubsidyApplicationRepository applicationRepository;
     @Autowired private ApplicationRemarkRepository remarkRepository;
@@ -210,6 +220,43 @@ public class EligibilityService {
             if (!optional.isEmpty()) docs.add(optional.keySet().iterator().next());
         }
         return calculateLiveScore(beneficiary, scheme, docs);
+    }
+
+    // Scan actionable applications periodically: works even when an officer action
+    // happened before SMTP became available. Only the registered citizen is emailed.
+    @Scheduled(cron = "0 */5 * * * *")
+    @org.springframework.transaction.annotation.Transactional
+    public void deliverCitizenActionEmails() {
+        if (!citizenMailEnabled || mailFrom.isBlank()) return;
+        JavaMailSender sender = mailSenderProvider.getIfAvailable();
+        if (sender == null) return;
+        for (SubsidyApplication app : applicationRepository.findAll()) {
+            if (!app.isAwaitingResubmission()) continue;
+            ApplicationStatus status = app.getApplicationStatus();
+            if (status != ApplicationStatus.APPLICANT_REVERIFICATION && status != ApplicationStatus.REJECTED) continue;
+            // Each new officer decision appends a remark; its ID changes for each request.
+            ApplicationRemark latest = app.getRemarks().isEmpty() ? null : app.getRemarks().get(app.getRemarks().size()-1);
+            if (latest == null || latest.getId() == null) continue;
+            String key = "ACTION:" + app.getId() + ":" + latest.getId();
+            if (key.equals(app.getLastCitizenActionEmailKey())) continue;
+            String recipient = app.getUser() == null ? null : app.getUser().getEmail();
+            if (recipient == null || recipient.isBlank()) continue;
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(recipient);
+                message.setSubject("SAGAR - Documents/action required for application #" + app.getId());
+                message.setText("Dear Citizen,\n\nYour SAGAR application SUB-" + app.getId() +
+                        " requires your attention. Current status: " + status.name().replace('_',' ') +
+                        ".\nPlease sign in and review the officer's instructions: " + portalUrl +
+                        "/dashboard/citizen\n\nDo not reply with sensitive documents.\nSAGAR Team");
+                sender.send(message);
+                app.setLastCitizenActionEmailKey(key);
+                applicationRepository.save(app);
+            } catch (MailException ex) {
+                System.err.println("SAGAR action email failed for application " + app.getId() + ": " + ex.getClass().getSimpleName());
+            }
+        }
     }
 
     // ---------------- Workflow operations ----------------

@@ -35,6 +35,37 @@ public class DisbursementPlan {
     @OrderBy("sequenceNo ASC")
     private List<DisbursementMilestone> milestones = new ArrayList<>();
 
+    // Active review is independent of the ordinary Finance hold.
+    @Column(nullable = false)
+    private boolean fundReviewFlagged = false;
+    @Column(length = 80)
+    private String fundReviewReason;
+    @Column(length = 2000)
+    private String fundReviewRemarks;
+    private String fundReviewRaisedBy;
+    private LocalDateTime fundReviewRaisedAt;
+    private String fundReviewClearedBy;
+    private LocalDateTime fundReviewClearedAt;
+    @Column(length = 2000)
+    private String fundReviewResolution;
+
+    public boolean isFundReviewFlagged() { return fundReviewFlagged; }
+    public void setFundReviewFlagged(boolean value) { this.fundReviewFlagged = value; }
+    public String getFundReviewReason() { return fundReviewReason; }
+    public void setFundReviewReason(String value) { this.fundReviewReason = value; }
+    public String getFundReviewRemarks() { return fundReviewRemarks; }
+    public void setFundReviewRemarks(String value) { this.fundReviewRemarks = value; }
+    public String getFundReviewRaisedBy() { return fundReviewRaisedBy; }
+    public void setFundReviewRaisedBy(String value) { this.fundReviewRaisedBy = value; }
+    public LocalDateTime getFundReviewRaisedAt() { return fundReviewRaisedAt; }
+    public void setFundReviewRaisedAt(LocalDateTime value) { this.fundReviewRaisedAt = value; }
+    public String getFundReviewClearedBy() { return fundReviewClearedBy; }
+    public void setFundReviewClearedBy(String value) { this.fundReviewClearedBy = value; }
+    public LocalDateTime getFundReviewClearedAt() { return fundReviewClearedAt; }
+    public void setFundReviewClearedAt(LocalDateTime value) { this.fundReviewClearedAt = value; }
+    public String getFundReviewResolution() { return fundReviewResolution; }
+    public void setFundReviewResolution(String value) { this.fundReviewResolution = value; }
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();

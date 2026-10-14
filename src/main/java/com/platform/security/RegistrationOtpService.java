@@ -3,12 +3,10 @@ package com.platform.security;
 import com.platform.audit.AuditLogService;
 import com.platform.user.User;
 import com.platform.user.UserRepository;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.core.env.Environment;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -25,7 +23,10 @@ public class RegistrationOtpService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final Environment environment;
+    private final java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+    @Value("${SAGAR_OTP_WEBAPP_URL:}") private String otpWebappUrl;
+    @Value("${SAGAR_OTP_SECRET:}") private String otpSecret;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${sagar.otp.expiry-minutes:5}")
@@ -37,25 +38,21 @@ public class RegistrationOtpService {
     @Value("${sagar.otp.resend-seconds:60}")
     private long resendSeconds;
 
-    @Value("${sagar.otp.dev-display:true}")
+    @Value("${sagar.otp.dev-display:false}")
     private boolean devDisplay;
 
-    @Value("${sagar.mail.enabled:false}")
-    private boolean mailEnabled;
 
-    @Value("${spring.mail.username:}")
-    private String mailFrom;
 
     public RegistrationOtpService(RegistrationOtpRepository otpRepository,
                                   UserRepository userRepository,
                                   PasswordEncoder passwordEncoder,
                                   AuditLogService auditLogService,
-                                  ObjectProvider<JavaMailSender> mailSenderProvider) {
+                                  Environment environment) {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
-        this.mailSenderProvider = mailSenderProvider;
+        this.environment = environment;
     }
 
     @Transactional
@@ -97,7 +94,7 @@ public class RegistrationOtpService {
                 "REGISTRATION", user.getId(), "REGISTRATION_OTP_ISSUED",
                 null, null, "Citizen registration OTP issued.");
 
-        return devDisplay ? code : null;
+        return isDevDisplay() ? code : null;
     }
 
     @Transactional
@@ -145,28 +142,63 @@ public class RegistrationOtpService {
     }
 
     public boolean isDevDisplay() {
-        return devDisplay;
+        return devDisplay && !isProduction();
     }
 
     private void sendEmail(String recipient, String code) {
-        if (!mailEnabled) return;
-
-        JavaMailSender sender = mailSenderProvider.getIfAvailable();
-        if (sender == null) {
-            throw new IllegalStateException("Mail is enabled but JavaMailSender is not configured.");
-        }
-
-        if (mailFrom == null || mailFrom.isBlank()) {
-            throw new IllegalStateException("Mail is enabled but spring.mail.username is not configured.");
-        }
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(mailFrom.trim());
-        message.setTo(recipient);
-        message.setSubject("SAGAR Portal Registration OTP");
-        message.setText("Your SAGAR Portal registration OTP is " + code
-                + ". It expires in " + expiryMinutes
-                + " minutes. Do not share this code.");
-        sender.send(message);
+        sendAppsScript(recipient, code);
     }
+
+    private boolean isProduction() {
+        return java.util.Arrays.stream(environment.getActiveProfiles()).anyMatch(p -> p.equalsIgnoreCase("prod"));
+    }
+
+    private void sendAppsScript(String recipient, String code) {
+        if (otpWebappUrl.isBlank() || otpSecret.isBlank()) {
+            if (isDevDisplay()) return;
+            throw new IllegalStateException("Google Apps Script OTP is not configured. Set SAGAR_OTP_WEBAPP_URL and SAGAR_OTP_SECRET.");
+        }
+        if (!otpWebappUrl.startsWith("https://script.google.com/macros/s/") || !otpWebappUrl.endsWith("/exec")) {
+            throw new IllegalStateException("Invalid Google Apps Script OTP URL.");
+        }
+        try {
+            String payload = "{\"secret\":\"" + escapeJson(otpSecret)
+                    + "\",\"to\":\"" + escapeJson(recipient)
+                    + "\",\"otp\":\"" + escapeJson(code) + "\"}";
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(otpWebappUrl))
+                    .header("Content-Type", "text/plain; charset=utf-8")
+                    .timeout(java.time.Duration.ofSeconds(25))
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(payload)).build();
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200 || !"SUCCESS".equals(response.body().trim())) {
+                throw new IllegalStateException("Google Apps Script did not confirm OTP sending (HTTP "
+                        + response.statusCode() + "). Check Apps Script Executions and deployment permissions.");
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("OTP email sending interrupted.", ex);
+        } catch (java.io.IOException ex) {
+            throw new IllegalStateException("Google Apps Script OTP request failed.", ex);
+        }
+    }
+    private static String escapeJson(String value) {
+        StringBuilder out = new StringBuilder();
+        for (char c : value.toCharArray()) {
+            switch (c) {
+                case '"' -> out.append("\\\"");
+                case '\\' -> out.append("\\\\");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
+                    else out.append(c);
+                }
+            }
+        }
+        return out.toString();
+    }
+
 }

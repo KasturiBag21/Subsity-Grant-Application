@@ -12,8 +12,32 @@
         .breakdown-table td { padding: 12px; border-bottom: 1px solid #E2E8F0; font-weight: 600; }
         .badge-pass { background-color: rgba(40,167,69,0.1); color: #28a745; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
     </style>
+    <style>
+        /* SAGAR shared header identity: scoped to avoid changing page layout */
+        .sagar-identity{display:inline-flex;align-items:center;gap:12px;text-align:left;text-decoration:none;vertical-align:middle;max-width:100%}
+        .sagar-identity .sagar-mark{width:60px;height:60px;flex:0 0 60px;display:block}
+        .sagar-identity .sagar-wordmark{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+        .sagar-identity .sagar-name{font:800 29px/1.08 'Segoe UI',Arial,sans-serif;color:#000080;letter-spacing:-.7px;margin:0}
+        .sagar-identity .sagar-name span{color:#ff9933}
+        .sagar-identity .sagar-subtitle{font:800 11px/1.4 'Segoe UI',Arial,sans-serif;letter-spacing:.65px;color:#53698d;margin-top:2px}
+        .sagar-identity .sagar-role{font:800 11px/1.4 'Segoe UI',Arial,sans-serif;color:#000080;margin-top:3px}
+        @media(max-width:600px){.sagar-identity .sagar-mark{width:45px;height:45px;flex-basis:45px}.sagar-identity .sagar-name{font-size:23px}.sagar-identity .sagar-subtitle{font-size:9px;letter-spacing:.1px}}
+    </style>
+    <link rel="stylesheet" th:href="@{/css/sagar-footer.css}">
+    <style>
+        /* SAGAR header stays visible while scrolling; scoped to this page's header. */
+        .sagar-sticky-header { position: sticky !important; top: 0 !important; left: auto !important; right: auto !important; z-index: 1100 !important; }
+        @media (max-width: 900px) { .sagar-sticky-header { flex-wrap: wrap; row-gap: 10px; } }
+    </style>
 </head>
 <body>
+<div class="sagar-sticky-header sagar-auth-header" style="background:white;padding:14px 24px;border-bottom:3px solid #ff9933"><a th:href="@{/dashboard/citizen}" style="text-decoration:none"><span class="sagar-identity"><span class="sagar-mark"><svg class="brand-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11" stroke="#000080" stroke-width="2" fill="#FFFFFF"/>
+            <circle cx="12" cy="13" r="3.5" stroke="#000080" stroke-width="1" stroke-dasharray="1 1"/>
+            <path d="M6 15V10L12 5L18 10V15H6Z" stroke="#000080" stroke-width="1.5" fill="none"/>
+            <path d="M5 18C10 21 14 21 19 18" stroke="#138808" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M12 2V5" stroke="#FF9933" stroke-width="2" stroke-linecap="round"/>
+        </svg></span><span class="sagar-wordmark"><span class="sagar-name">SAGAR<span>.</span></span><span class="sagar-subtitle">SUBSIDY &amp; GRANT ADMINISTRATION</span><span class="sagar-role">Eligibility Results</span></span></span></a></div>
 
 
 <!-- Inside src/main/resources/templates/eligibility-result.html -->
@@ -81,7 +105,7 @@
     </form>
 </div>
 
-
-
+<!-- SAGAR Footer -->
+<div th:replace="~{footer :: siteFooter}"></div>
 </body>
 </html>

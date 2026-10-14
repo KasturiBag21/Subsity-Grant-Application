@@ -7,6 +7,11 @@ import com.platform.application.ApplicationStatus;
 import com.platform.application.SubsidyApplication;
 import com.platform.application.SubsidyApplicationRepository;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +28,13 @@ import java.nio.file.Paths;
 
 @Service
 public class DisbursementPlanService {
+    @org.springframework.beans.factory.annotation.Autowired private com.platform.config.CloudinaryStorageService cloudinaryStorage;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private ObjectProvider<JavaMailSender> mailSenderProvider;
+    @Value("${sagar.mail.enabled:false}") private boolean citizenMailEnabled;
+    @Value("${spring.mail.username:}") private String mailFrom;
+    @Value("${sagar.portal.url:http://localhost:8081}") private String portalUrl;
 
     private final DisbursementPlanRepository planRepository;
     private final ComplianceReminderRepository reminderRepository;
@@ -210,6 +222,51 @@ public class DisbursementPlanService {
     }
 
     @Transactional
+    public void raiseFundReviewFlag(Long applicationId, String reason, String remarks, String officerEmail) {
+        SubsidyApplication app = getApplication(applicationId);
+        DisbursementPlan plan = getOrCreatePlan(app);
+        if (plan.isFundReviewFlagged()) throw new IllegalStateException("A fund review flag is already active.");
+        if (plan.getReleasedAmount() <= 0) throw new IllegalStateException("Fund review requires a previously released installment.");
+        java.util.Set<String> reasons = java.util.Set.of("MISSING_PROOF", "INVALID_PROOF", "SUSPECTED_MISUSE", "OTHER");
+        if (reason == null || !reasons.contains(reason)) throw new IllegalArgumentException("Select a valid flag reason.");
+        if (remarks == null || remarks.isBlank()) throw new IllegalArgumentException("Officer remarks are required.");
+        plan.setFundReviewFlagged(true);
+        plan.setFundReviewReason(reason);
+        plan.setFundReviewRemarks(remarks.trim().substring(0, Math.min(2000, remarks.trim().length())));
+        plan.setFundReviewRaisedBy(officerEmail);
+        plan.setFundReviewRaisedAt(LocalDateTime.now());
+        plan.setFundReviewClearedBy(null);
+        plan.setFundReviewClearedAt(null);
+        plan.setFundReviewResolution(null);
+        plan.setStatus(DisbursementPlanStatus.ON_HOLD);
+        planRepository.save(plan);
+        auditLogService.record("FUND_REVIEW", plan.getId(), "FLAG_RAISED", "NONE", reason,
+                "Application SUB-" + applicationId + "; " + remarks.trim());
+    }
+
+    @Transactional
+    public void clearFundReviewFlag(Long planId, String resolution, String adminEmail) {
+        DisbursementPlan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Disbursement plan not found."));
+        if (!plan.isFundReviewFlagged()) throw new IllegalStateException("This case has no active flag.");
+        if (resolution == null || resolution.isBlank()) throw new IllegalArgumentException("A resolution reason is required.");
+        plan.setFundReviewFlagged(false);
+        plan.setFundReviewClearedBy(adminEmail);
+        plan.setFundReviewClearedAt(LocalDateTime.now());
+        plan.setFundReviewResolution(resolution.trim().substring(0, Math.min(2000, resolution.trim().length())));
+        // Keep ON_HOLD: clearing a flag must never authorize automatic payment.
+        plan.setStatus(DisbursementPlanStatus.ON_HOLD);
+        planRepository.save(plan);
+        auditLogService.record("FUND_REVIEW", plan.getId(), "FLAG_CLEARED", "ACTIVE", "CLEARED",
+                "Application SUB-" + plan.getApplication().getId() + "; " + resolution.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DisbursementPlan> getFlaggedPlans() {
+        return planRepository.findByFundReviewFlaggedTrueOrderByFundReviewRaisedAtDesc();
+    }
+
+    @Transactional
     public void holdPlan(Long applicationId, String remarks) {
         SubsidyApplication app = getApplication(applicationId);
         if (app.getApplicationStatus() != ApplicationStatus.FUND_DISBURSEMENT) {
@@ -241,6 +298,7 @@ public class DisbursementPlanService {
         if (plan.getStatus() != DisbursementPlanStatus.ON_HOLD) {
             throw new IllegalStateException("This disbursement plan is not currently on hold.");
         }
+        if (plan.isFundReviewFlagged()) throw new IllegalStateException("Admin must clear the active fund review flag before resuming.");
         refreshPlanStatus(plan);
         plan.setUpdatedAt(LocalDateTime.now());
         planRepository.save(plan);
@@ -304,15 +362,9 @@ public class DisbursementPlanService {
 
         String original = file.getOriginalFilename() == null ? "compliance-document" : file.getOriginalFilename();
         String safeOriginal = org.springframework.util.StringUtils.cleanPath(original).replaceAll("[^a-zA-Z0-9._-]", "_");
-        String root = System.getProperty("user.dir") + java.io.File.separator + "uploads" + java.io.File.separator + "applications"
-                + java.io.File.separator + app.getId() + java.io.File.separator + "compliance";
         try {
-            Path directory = Paths.get(root).toAbsolutePath().normalize();
-            Files.createDirectories(directory);
             String stored = "milestone_" + milestone.getSequenceNo() + "_" + System.currentTimeMillis() + "_" + safeOriginal;
-            Path target = directory.resolve(stored).normalize();
-            if (!target.startsWith(directory)) throw new IllegalStateException("Invalid compliance filename.");
-            file.transferTo(target.toFile());
+            cloudinaryStorage.upload(app.getId(), stored, file, true);
             milestone.setComplianceOriginalFilename(original);
             milestone.setComplianceStoredFilename(stored);
             milestone.setComplianceUploadedAt(LocalDateTime.now());
@@ -510,12 +562,48 @@ public class DisbursementPlanService {
         return created;
     }
 
+    /** Retries pending citizen email notices without duplicating successfully sent mail. */
+    @Scheduled(cron = "0 */5 * * * *")
+    @Transactional
+    public void deliverPendingCitizenEmails() {
+        if (!citizenMailEnabled || mailFrom.isBlank()) return;
+        JavaMailSender sender = mailSenderProvider.getIfAvailable();
+        if (sender == null) return;
+        LocalDateTime now = LocalDateTime.now();
+        for (ComplianceReminder reminder : reminderRepository.findTop100ByEmailSentAtIsNullOrderBySentAtAsc()) {
+            if (reminder.getEmailLastAttemptAt() != null
+                    && reminder.getEmailLastAttemptAt().isAfter(now.minusMinutes(5))) continue;
+            String recipient = reminder.getMilestone().getPlan().getApplication().getUser().getEmail();
+            if (recipient == null || recipient.isBlank()) continue;
+            reminder.setEmailLastAttemptAt(now);
+            reminder.setEmailAttempts(reminder.getEmailAttempts() + 1);
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(recipient);
+                message.setSubject("SAGAR - Action required for application #" +
+                        reminder.getMilestone().getPlan().getApplication().getId());
+                message.setText("Dear Citizen,\n\n" + reminder.getMessage() +
+                        "\n\nApplication: SUB-" + reminder.getMilestone().getPlan().getApplication().getId() +
+                        "\nPlease sign in to SAGAR: " + portalUrl + "/dashboard/citizen" +
+                        "\n\nFor security, do not email identity or banking documents in reply.\nSAGAR Team");
+                sender.send(message);
+                reminder.setEmailSentAt(LocalDateTime.now());
+            } catch (MailException ex) {
+                // Keep pending for retry; never interrupt disbursement or compliance workflows.
+                System.err.println("SAGAR citizen email delivery failed for reminder " + reminder.getId() + ": " + ex.getClass().getSimpleName());
+            }
+            reminderRepository.save(reminder);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<ComplianceReminder> getReminderHistoryForPlan(Long planId) {
         return reminderRepository.findByMilestonePlanIdOrderBySentAtDesc(planId);
     }
 
     private void ensurePlanActive(DisbursementPlan plan) {
+        if (plan.isFundReviewFlagged()) throw new IllegalStateException("Active fund review flag blocks further installment actions.");
         if (plan.getStatus() == DisbursementPlanStatus.ON_HOLD) {
             throw new IllegalStateException("The disbursement plan is on hold. Resume the Finance workflow before continuing.");
         }
@@ -535,6 +623,7 @@ public class DisbursementPlanService {
     }
 
     private void refreshPlanStatus(DisbursementPlan plan) {
+        if (plan.isFundReviewFlagged()) { plan.setStatus(DisbursementPlanStatus.ON_HOLD); return; }
         if (plan.getMilestones().isEmpty()) {
             plan.setStatus(DisbursementPlanStatus.PLANNED);
             return;

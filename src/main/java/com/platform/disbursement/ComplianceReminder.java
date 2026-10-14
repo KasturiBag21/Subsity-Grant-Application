@@ -26,6 +26,17 @@ public class ComplianceReminder {
     @Column(length = 500)
     private String message;
 
+    // Null means not yet emailed; persisted to avoid resending delivered alerts.
+    private LocalDateTime emailSentAt;
+    private int emailAttempts;
+    private LocalDateTime emailLastAttemptAt;
+    public LocalDateTime getEmailSentAt() { return emailSentAt; }
+    public void setEmailSentAt(LocalDateTime value) { emailSentAt = value; }
+    public int getEmailAttempts() { return emailAttempts; }
+    public void setEmailAttempts(int value) { emailAttempts = value; }
+    public LocalDateTime getEmailLastAttemptAt() { return emailLastAttemptAt; }
+    public void setEmailLastAttemptAt(LocalDateTime value) { emailLastAttemptAt = value; }
+
     public Long getId() {
         return id;
     }
